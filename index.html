@@ -1,0 +1,3999 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>個人用 朝会テキスト整理ツール</title>
+  <style>
+    :root {
+      --bg-main: #f1f5f9;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f8fafc;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --border-color: #cbd5e1;
+      --primary: #1e40af;
+      --primary-hover: #1e3a8a;
+      --primary-light: #eff6ff;
+      --accent: #0f766e;
+      --accent-light: #f0fdfa;
+      --danger: #b91c1c;
+      --danger-hover: #991b1b;
+      --danger-light: #fef2f2;
+      --warning: #b45309;
+      --warning-light: #fffbeb;
+      --success: #15803d;
+      --success-light: #f0fdf4;
+      --radius: 6px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+      --font-sans: "Hiragino Kaku Gothic ProN", "Meiryo", system-ui, -apple-system, sans-serif;
+      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, "MS Gothic", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      line-height: 1.5;
+      font-size: 14px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header & Navigation */
+    .app-header {
+      background-color: #0f172a;
+      color: #ffffff;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 54px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+
+    .app-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: 0.02em;
+    }
+
+    .db-status-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background-color: #065f46;
+      color: #a7f3d0;
+      font-weight: 500;
+    }
+    .db-status-badge.error {
+      background-color: #991b1b;
+      color: #fecaca;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 4px;
+      height: 100%;
+      align-items: flex-end;
+    }
+
+    .nav-tab {
+      background: transparent;
+      border: none;
+      color: #cbd5e1;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+
+    .nav-tab:hover {
+      color: #ffffff;
+      background-color: rgba(255,255,255,0.05);
+    }
+
+    .nav-tab.active {
+      color: #ffffff;
+      border-bottom-color: #38bdf8;
+      background-color: rgba(255,255,255,0.08);
+    }
+
+    /* Notification Banner */
+    #notification-area {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 400px;
+    }
+
+    .toast {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      background: #1e293b;
+      color: #fff;
+      font-size: 13px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-left: 4px solid #38bdf8;
+      animation: slideIn 0.2s ease-out;
+    }
+    .toast.success { border-left-color: #22c55e; }
+    .toast.error { border-left-color: #ef4444; background: #7f1d1d; }
+    .toast.warning { border-left-color: #f59e0b; }
+
+    @keyframes slideIn {
+      from { transform: translateY(15px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Main Content Container */
+    .main-container {
+      flex: 1;
+      padding: 16px 20px;
+      max-width: 1600px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .view-panel {
+      display: none;
+    }
+    .view-panel.active {
+      display: block;
+    }
+
+    /* Split Layout for Meeting View */
+    .split-layout {
+      display: grid;
+      grid-template-columns: 1fr 480px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    @media (max-width: 1100px) {
+      .split-layout {
+        grid-template-columns: 1fr;
+      }
+      .app-header {
+        flex-direction: column;
+        height: auto;
+        padding: 10px 16px 0;
+        align-items: flex-start;
+      }
+      .nav-tabs {
+        width: 100%;
+        overflow-x: auto;
+        margin-top: 8px;
+      }
+      .nav-tab {
+        white-space: nowrap;
+      }
+    }
+
+    /* Cards & Sections */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .card.check-card {
+      border-color: #f59e0b;
+    }
+
+    .card-header {
+      padding: 10px 14px;
+      background-color: var(--bg-subtle);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .card.check-card .card-header {
+      background-color: var(--warning-light);
+      border-bottom-color: #fde68a;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .card-body {
+      padding: 14px;
+    }
+
+    /* Sticky Preview Column */
+    .sticky-column {
+      position: sticky;
+      top: 70px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-main);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover:not(:disabled) {
+      background-color: var(--bg-subtle);
+      border-color: #94a3b8;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-sm {
+      padding: 3px 8px;
+      font-size: 12px;
+    }
+    .btn-primary {
+      background-color: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background-color: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+    .btn-accent {
+      background-color: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+    .btn-accent:hover:not(:disabled) {
+      background-color: #115e59;
+    }
+    .btn-warning {
+      background-color: #d97706;
+      border-color: #d97706;
+      color: #ffffff;
+    }
+    .btn-warning:hover:not(:disabled) {
+      background-color: #b45309;
+    }
+    .btn-danger {
+      background-color: var(--danger);
+      border-color: var(--danger);
+      color: #ffffff;
+    }
+    .btn-danger:hover:not(:disabled) {
+      background-color: var(--danger-hover);
+    }
+    .btn-outline-danger {
+      color: var(--danger);
+      border-color: #fca5a5;
+      background: #fff;
+    }
+    .btn-outline-danger:hover:not(:disabled) {
+      background-color: var(--danger-light);
+    }
+
+    /* Form Controls */
+    .form-group {
+      margin-bottom: 12px;
+    }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .form-control {
+      width: 100%;
+      padding: 6px 10px;
+      font-size: 13px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      font-family: inherit;
+      color: var(--text-main);
+      background-color: #fff;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(30,64,175,0.15);
+    }
+    textarea.form-control {
+      resize: vertical;
+      min-height: 70px;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+
+    /* Date Bar */
+    .date-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: var(--bg-surface);
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+    }
+    .date-selector-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .current-date-display {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary);
+      background: var(--primary-light);
+      padding: 4px 10px;
+      border-radius: var(--radius);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .status-未着手 { background: #e2e8f0; color: #334155; }
+    .status-対応中 { background: #dbeafe; color: #1e40af; }
+    .status-完了 { background: #dcfce7; color: #15803d; }
+    .status-要確認 { background: #fef3c7; color: #b45309; border: 1px solid #f59e0b; }
+
+    .type-badge.type-check { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+
+    /* Project & Task Lists in Meeting View */
+    .project-group {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      background: #fff;
+    }
+    .project-group-header {
+      background: #f8fafc;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-color);
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .task-item {
+      padding: 8px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .task-item:last-child {
+      border-bottom: none;
+    }
+    .task-item.is-completed {
+      background-color: #f8fafc;
+      color: var(--text-muted);
+    }
+    .task-main-info {
+      flex: 1;
+    }
+    .task-title-line {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .task-detail-line {
+      font-size: 12px;
+      color: var(--text-main);
+      margin-top: 3px;
+      padding-left: 10px;
+      border-left: 2px solid #cbd5e1;
+      white-space: pre-wrap;
+    }
+    .task-meta-line {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 3px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-family: var(--font-mono);
+    }
+    .task-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* Check Section Items */
+    .source-section-block {
+      margin-bottom: 14px;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .source-section-block:last-child {
+      margin-bottom: 0;
+    }
+    .source-item {
+      padding: 8px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .source-item:last-child {
+      border-bottom: none;
+    }
+    .source-content-wrap {
+      flex: 1;
+      font-size: 13px;
+    }
+    .source-subject {
+      font-weight: 700;
+    }
+    .source-detail {
+      color: var(--text-muted);
+      font-size: 12px;
+      white-space: pre-wrap;
+      margin-top: 2px;
+    }
+
+    /* Preview Editor */
+    .preview-textarea {
+      width: 100%;
+      height: 500px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.55;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      background-color: #fcfcfc;
+      color: #0f172a;
+      resize: vertical;
+      white-space: pre;
+      overflow-wrap: normal;
+      overflow-x: auto;
+    }
+    .preview-textarea.is-edited {
+      border-color: #f59e0b;
+      background-color: #fffef7;
+    }
+
+    .edit-state-banner {
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .edit-state-banner.auto {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    .edit-state-banner.manual {
+      background: var(--warning-light);
+      color: var(--warning);
+      border: 1px solid #fde68a;
+    }
+
+    /* Tables */
+    .data-table-wrapper {
+      overflow-x: auto;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .data-table th, .data-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: left;
+      vertical-align: top;
+    }
+    .data-table th {
+      background-color: #f8fafc;
+      font-weight: 700;
+      color: var(--text-muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .data-table tr:hover {
+      background-color: #f8fafc;
+    }
+
+    /* ==========================================
+       WBS / Gantt Schedule Styles
+       ========================================== */
+    .wbs-summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .wbs-stat-card {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .wbs-stat-card.alert {
+      border-color: #f87171;
+      background: #fef2f2;
+    }
+    .wbs-stat-card.warn {
+      border-color: #fbbf24;
+      background: #fffbeb;
+    }
+    .wbs-stat-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+    .wbs-stat-value {
+      font-size: 18px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+
+    .wbs-scroll-container {
+      overflow-x: auto;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      background: #fff;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+
+    .wbs-table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: max-content;
+      min-width: 100%;
+      font-size: 12px;
+    }
+
+    .wbs-table th, .wbs-table td {
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 6px 8px;
+      vertical-align: middle;
+    }
+
+    .wbs-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: #f8fafc;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Sticky left columns for WBS */
+    .wbs-col-task {
+      position: sticky;
+      left: 0;
+      z-index: 15;
+      background: #fff;
+      width: 280px;
+      min-width: 280px;
+      max-width: 280px;
+      border-right: 2px solid #cbd5e1 !important;
+    }
+    .wbs-table thead .wbs-col-task {
+      z-index: 30;
+      background: #f1f5f9;
+    }
+
+    .wbs-col-meta {
+      width: 90px;
+      min-width: 90px;
+      text-align: center;
+      background: #fff;
+    }
+
+    .wbs-day-col {
+      width: 44px;
+      min-width: 44px;
+      max-width: 44px;
+      text-align: center;
+      padding: 4px 2px !important;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      position: relative;
+    }
+
+    .wbs-day-col.is-today {
+      background-color: #eff6ff !important;
+    }
+    .wbs-table thead .wbs-day-col.is-today {
+      background-color: #dbeafe !important;
+      color: #1e40af;
+      border-bottom: 2px solid #1e40af;
+    }
+    .wbs-day-col.is-sat {
+      background-color: #f8fafc;
+      color: #0369a1;
+    }
+    .wbs-day-col.is-sun {
+      background-color: #fef2f2;
+      color: #b91c1c;
+    }
+
+    .wbs-project-row td {
+      background-color: #e2e8f0 !important;
+      font-weight: 700;
+      color: #0f172a;
+      padding: 6px 10px;
+    }
+
+    .wbs-load-row td {
+      background-color: #f8fafc;
+      font-weight: 700;
+      font-size: 11px;
+      text-align: center;
+      border-bottom: 2px solid #cbd5e1;
+    }
+    .wbs-load-cell-overlap {
+      background-color: #fee2e2 !important;
+      color: #b91c1c !important;
+      font-weight: 800;
+    }
+    .wbs-load-cell-multi {
+      background-color: #fef3c7 !important;
+      color: #b45309 !important;
+    }
+
+    .wbs-task-row:hover td {
+      background-color: #f8fafc;
+    }
+    .wbs-task-row.has-overlap .wbs-col-task {
+      background-color: #fffef7;
+      border-left: 4px solid #ef4444;
+    }
+
+    /* Gantt Bars inside day cells */
+    .wbs-bar-wrap {
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.1s;
+    }
+    .wbs-bar-wrap:hover {
+      transform: scale(1.06);
+    }
+
+    .wbs-bar-未着手 {
+      background-color: #cbd5e1;
+      color: #1e293b;
+      border: 1px solid #94a3b8;
+    }
+    .wbs-bar-対応中 {
+      background-color: #3b82f6;
+      color: #ffffff;
+      border: 1px solid #1d4ed8;
+    }
+    .wbs-bar-完了 {
+      background-color: #86efac;
+      color: #14532d;
+      border: 1px solid #22c55e;
+    }
+    .wbs-bar-要確認 {
+      background-color: #fcd34d;
+      color: #78350f;
+      border: 1px solid #d97706;
+    }
+
+    /* Overlap Highlight on Bar */
+    .wbs-bar-wrap.is-overlapped {
+      box-shadow: 0 0 0 2px #ef4444;
+      position: relative;
+    }
+    .wbs-day-col.cell-overlap-bg {
+      background-image: repeating-linear-gradient(
+        -45deg,
+        rgba(239, 68, 68, 0.08),
+        rgba(239, 68, 68, 0.08) 5px,
+        transparent 5px,
+        transparent 10px
+      );
+    }
+
+    .overlap-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fca5a5;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    .wbs-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      align-items: center;
+      margin-top: 10px;
+    }
+    .wbs-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .wbs-legend-box {
+      width: 16px;
+      height: 12px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    /* Modals */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      z-index: 500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-backdrop.open {
+      display: flex;
+    }
+    .modal-dialog {
+      background: #fff;
+      border-radius: var(--radius);
+      max-width: 680px;
+      width: 100%;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+    }
+    .modal-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .modal-body {
+      padding: 16px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .modal-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .helper-text {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .carryover-result-box {
+      padding: 8px 12px;
+      background: var(--accent-light);
+      border: 1px solid #99f6e4;
+      color: var(--accent);
+      border-radius: var(--radius);
+      font-size: 12px;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    .check-sub-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #92400e;
+      background: #fef3c7;
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="app-title">
+      <span>📋 個人用 朝会テキスト整理ツール</span>
+      <span id="db-status" class="db-status-badge">IndexedDB 接続中...</span>
+    </div>
+    <nav class="nav-tabs" aria-label="メインナビゲーション">
+      <button type="button" class="nav-tab active" data-target="view-meeting">1. 朝会作成</button>
+      <button type="button" class="nav-tab" data-target="view-projects">2. 案件・タスク管理</button>
+      <button type="button" class="nav-tab" data-target="view-wbs">3. 対応スケジュール (WBS)</button>
+      <button type="button" class="nav-tab" data-target="view-search">4. 履歴検索</button>
+      <button type="button" class="nav-tab" data-target="view-settings">5. 設定・データ管理</button>
+    </nav>
+  </header>
+
+  <!-- Toast Notification Area -->
+  <div id="notification-area" aria-live="polite"></div>
+
+  <!-- Datalists for Autocomplete -->
+  <datalist id="datalist-assignees"></datalist>
+  <datalist id="datalist-task-titles"></datalist>
+
+  <!-- Main Content -->
+  <main class="main-container">
+
+    <!-- ==========================================
+         VIEW 1: 朝会作成画面
+         ========================================== -->
+    <section id="view-meeting" class="view-panel active">
+      <!-- Top Date & Carryover Bar -->
+      <div class="date-toolbar">
+        <div class="date-selector-group">
+          <label for="meeting-date-input" class="form-label" style="margin:0;">対象日付:</label>
+          <button type="button" class="btn btn-sm" id="btn-prev-day" title="前日へ">◀ 前日</button>
+          <input type="date" id="meeting-date-input" class="form-control" style="width:auto;">
+          <button type="button" class="btn btn-sm" id="btn-next-day" title="翌日へ">翌日 ▶</button>
+          <button type="button" class="btn btn-sm" id="btn-today">今日</button>
+          <span id="meeting-date-formatted" class="current-date-display">----/--/--</span>
+          <span id="meeting-saved-indicator" class="badge" style="background:#e2e8f0; color:#475569;">未保存</span>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-accent" id="btn-carryover">
+            📥 前日（または直近）の未完了タスクを引き継ぐ
+          </button>
+          <button type="button" class="btn btn-primary" id="btn-quick-add-task-top">
+            📋 タスク登録（手入力 / メール・テキスト貼り付け）
+          </button>
+        </div>
+      </div>
+
+      <div id="carryover-result" class="carryover-result-box"></div>
+
+      <div class="split-layout">
+        <!-- Left Column: Structured Inputs -->
+        <div>
+          <!-- 案件別タスク一覧（すべてのタスクを一元管理） -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>📁 案件別タスク一覧（全タスク一元管理・当日表示対象）</span>
+                <label style="font-size:12px; font-weight:normal; display:inline-flex; align-items:center; gap:4px; margin-left:8px; cursor:pointer;">
+                  <input type="checkbox" id="chk-show-completed-today" checked>
+                  当日完了分を表示
+                </label>
+              </div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-sm" id="btn-new-project-quick">＋ 新規案件追加</button>
+                <button type="button" class="btn btn-sm" id="btn-pick-existing-task">＋ 既存タスクを当日リストに追加</button>
+                <button type="button" class="btn btn-sm btn-primary" id="btn-quick-add-task">＋ タスク登録</button>
+              </div>
+            </div>
+            <div class="card-body" id="meeting-tasks-container">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- 確認セクション（別出し） -->
+          <div class="card check-card">
+            <div class="card-header">
+              <div class="card-title">
+                <span id="meeting-check-section-title">⚠️ 確認セクション（【確認事項】）</span>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button type="button" class="btn btn-sm btn-warning" id="btn-add-check-source">＋ 確認事項を追加</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <!-- 手動登録した確認事項 -->
+              <div style="margin-bottom: 14px;">
+                <div class="check-sub-title">
+                  <span>📝 登録済みの確認事項（当日の情報）</span>
+                </div>
+                <div id="meeting-check-sources-container"></div>
+              </div>
+
+              <!-- タスク由来の要確認事項 -->
+              <div>
+                <div class="check-sub-title">
+                  <span>🔍 要確認タスク・日付/担当者未定タスク（案件別タスクから自動抽出）</span>
+                </div>
+                <div id="meeting-check-tasks-container"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Morning Meeting Text Preview & Save -->
+        <div class="sticky-column">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📄 朝会テキスト プレビュー・編集</div>
+              <div style="display:flex; gap:6px;">
+                <button type="button" class="btn btn-sm" id="btn-regenerate-preview" title="構造化データから再生成して直接編集をリセット">🔄 再生成</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="preview-mode-banner" class="edit-state-banner auto">
+                <span id="preview-mode-text">自動生成モード（タスクや確認事項の変更が即時反映されます）</span>
+              </div>
+              <textarea id="meeting-preview-textarea" class="preview-textarea" spellcheck="false" aria-label="朝会テキストのプレビューと直接編集"></textarea>
+              <p class="helper-text">
+                ※プレビューを直接編集して保存できます。直接編集した内容は構造化タスクデータには逆反映されないため、既存タスクを誤って破壊しません。
+              </p>
+              <div style="display:flex; gap:8px; margin-top:12px;">
+                <button type="button" class="btn btn-primary" id="btn-save-meeting" style="flex:1; padding:10px;">
+                  💾 朝会テキストを保存
+                </button>
+                <button type="button" class="btn btn-accent" id="btn-copy-meeting" style="flex:1; padding:10px;">
+                  📋 テキストをコピー
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         VIEW 2: 案件・タスク管理画面
+         ========================================== -->
+    <section id="view-projects" class="view-panel">
+      <div class="split-layout" style="grid-template-columns: 360px 1fr;">
+        <!-- Projects Column -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📁 案件一覧</div>
+              <button type="button" class="btn btn-sm btn-primary" id="btn-new-project">＋ 案件登録</button>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <input type="search" id="project-filter-input" class="form-control" placeholder="案件名・備考で絞り込み...">
+              </div>
+              <div id="projects-list-container"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tasks Column -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span id="selected-project-heading">すべての案件のタスク</span>
+              </div>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <select id="task-filter-status" class="form-control" style="width:auto;">
+                  <option value="">すべての状態</option>
+                  <option value="未着手">未着手</option>
+                  <option value="対応中">対応中</option>
+                  <option value="完了">完了</option>
+                  <option value="要確認">要確認</option>
+                </select>
+                <input type="search" id="task-filter-keyword" class="form-control" style="width:180px;" placeholder="作業内容・詳細・担当者...">
+                <button type="button" class="btn btn-sm btn-primary" id="btn-new-task-from-mgmt">＋ タスク追加</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="data-table-wrapper">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>案件名</th>
+                      <th>作業内容 / 詳細・判断</th>
+                      <th>担当者</th>
+                      <th>状態</th>
+                      <th>登録日 / 予定日 / 実施日 / 完了日</th>
+                      <th>更新日時</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="mgmt-tasks-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         VIEW 3: 対応スケジュール (WBS・重複可視化)
+         ========================================== -->
+    <section id="view-wbs" class="view-panel">
+      <!-- WBS Toolbar -->
+      <div class="date-toolbar">
+        <div class="date-selector-group">
+          <label for="wbs-start-date" class="form-label" style="margin:0;">表示開始日:</label>
+          <button type="button" class="btn btn-sm" id="btn-wbs-prev-week">◀ 1週間前</button>
+          <input type="date" id="wbs-start-date" class="form-control" style="width:auto;">
+          <button type="button" class="btn btn-sm" id="btn-wbs-next-week">1週間後 ▶</button>
+          <button type="button" class="btn btn-sm" id="btn-wbs-today">今日を中心に表示</button>
+          <select id="wbs-days-select" class="form-control" style="width:auto;">
+            <option value="14" selected>14日間表示</option>
+            <option value="21">21日間表示</option>
+            <option value="30">30日間表示</option>
+          </select>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <select id="wbs-filter-assignee" class="form-control" style="width:auto;">
+            <option value="">すべての担当者</option>
+          </select>
+          <select id="wbs-overlap-mode" class="form-control" style="width:auto;" title="重複判定の基準を選択">
+            <option value="assignee" selected>重複判定: 同一担当者の同日複数タスク</option>
+            <option value="all">重複判定: 担当者問わず同日の全並行タスク</option>
+          </select>
+          <label style="font-size:12px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; font-weight:600;">
+            <input type="checkbox" id="wbs-show-completed" checked>
+            完了タスクも表示
+          </label>
+          <label style="font-size:12px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; font-weight:600; color:var(--danger);">
+            <input type="checkbox" id="wbs-only-overlapped">
+            ⚠️ 重複があるタスクのみ表示
+          </label>
+          <button type="button" class="btn btn-sm btn-primary" id="btn-wbs-add-task">＋ タスク登録</button>
+        </div>
+      </div>
+
+      <!-- WBS Overlap Summary Cards -->
+      <div class="wbs-summary-cards" id="wbs-summary-cards">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- WBS Main Chart Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>📊 案件別 WBS・対応スケジュール表（作業重複チェック）</span>
+            <span style="font-size:11px; font-weight:normal; color:var(--text-muted);">※タスク名またはバーをクリックすると日程や担当者を編集できます</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="wbs-scroll-container" id="wbs-table-container">
+            <!-- Populated by JS -->
+          </div>
+
+          <div class="wbs-legend">
+            <span class="wbs-legend-item"><span class="wbs-legend-box wbs-bar-未着手"></span>未着手</span>
+            <span class="wbs-legend-item"><span class="wbs-legend-box wbs-bar-対応中"></span>対応中</span>
+            <span class="wbs-legend-item"><span class="wbs-legend-box wbs-bar-要確認"></span>要確認</span>
+            <span class="wbs-legend-item"><span class="wbs-legend-box wbs-bar-完了"></span>完了</span>
+            <span class="wbs-legend-item"><span class="overlap-badge">⚠️重複</span>同日に複数のタスク・作業が重なっている箇所</span>
+            <span class="wbs-legend-item"><strong>[予]</strong>:予定日 / <strong>[実]</strong>:実施日 / <strong>[完]</strong>:完了日 / <strong>[●]</strong>:期間中</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         VIEW 4: 履歴検索画面
+         ========================================== -->
+    <section id="view-search" class="view-panel">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🔍 履歴・統合検索</div>
+          <button type="button" class="btn btn-sm" id="btn-clear-search">条件クリア</button>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="search-date-exact">日付（単日指定）</label>
+              <input type="date" id="search-date-exact" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="search-date-from">日付範囲（開始）</label>
+              <input type="date" id="search-date-from" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="search-date-to">日付範囲（終了）</label>
+              <input type="date" id="search-date-to" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="search-project">案件名</label>
+              <input type="text" id="search-project" class="form-control" placeholder="案件名で部分一致">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="search-assignee">担当者</label>
+              <input type="text" id="search-assignee" class="form-control" list="datalist-assignees" placeholder="担当者名">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="search-task-title">作業内容</label>
+              <input type="text" id="search-task-title" class="form-control" list="datalist-task-titles" placeholder="作業内容">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="search-status">タスク状態</label>
+              <select id="search-status" class="form-control">
+                <option value="">すべて</option>
+                <option value="未着手">未着手</option>
+                <option value="対応中">対応中</option>
+                <option value="完了">完了</option>
+                <option value="要確認">要確認</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="search-target-type">検索対象種別</label>
+              <select id="search-target-type" class="form-control">
+                <option value="all">すべて（朝会・案件別タスク・確認セクション）</option>
+                <option value="meetings">保存済み朝会テキスト</option>
+                <option value="tasks">案件別タスク情報</option>
+                <option value="sources">確認セクション情報</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row" style="align-items:end;">
+            <div class="form-group" style="grid-column: 1 / -2;">
+              <label class="form-label" for="search-keyword">フリーキーワード（作業内容・詳細・元文章・朝会本文・判断方針など）</label>
+              <input type="search" id="search-keyword" class="form-control" placeholder="キーワードを入力...">
+            </div>
+            <div class="form-group">
+              <button type="button" class="btn btn-primary" id="btn-exec-search" style="width:100%; padding:8px;">🔍 検索実行</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">検索結果 <span id="search-result-count" class="badge" style="background:#e2e8f0;">0件</span></div>
+        </div>
+        <div class="card-body" id="search-results-container">
+          <div class="empty-state">検索条件を指定して「検索実行」を押してください。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         VIEW 5: 設定・データ管理画面
+         ========================================== -->
+    <section id="view-settings" class="view-panel">
+      <div class="split-layout" style="grid-template-columns: 1fr 1fr;">
+        <!-- Template Settings -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">⚙️ 朝会テキスト テンプレート・表示設定</div>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label" for="tpl-project-border">案件名の区切り線</label>
+              <input type="text" id="tpl-project-border" class="form-control" value="##########">
+            </div>
+
+            <div style="margin: 14px 0 8px; font-weight: 700; font-size: 13px; color: var(--warning); border-bottom: 1px solid #fde68a; padding-bottom: 4px;">
+              確認セクション設定
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="tpl-check-section">確認セクション見出し</label>
+              <input type="text" id="tpl-check-section" class="form-control" value="【確認事項】">
+            </div>
+
+            <div class="form-group" style="margin-top:12px;">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;">
+                <input type="checkbox" id="tpl-omit-empty" checked>
+                登録データが空の確認セクションは朝会テキスト出力から省略する
+              </label>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:16px;">
+              <button type="button" class="btn btn-primary" id="btn-save-settings">💾 設定を保存</button>
+              <button type="button" class="btn" id="btn-reset-settings">初期値に戻す</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Backup / Restore / Reset -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📦 バックアップ（JSONエクスポート / 復元）</div>
+            </div>
+            <div class="card-body">
+              <p style="font-size:13px; margin-bottom:12px;">
+                ブラウザ内の全データ（案件、タスク、朝会履歴、確認事項、設定）をJSON形式で書き出し・復元します。
+              </p>
+              <div style="margin-bottom:20px;">
+                <button type="button" class="btn btn-primary" id="btn-export-json">⬇️ 全データをJSON形式でエクスポート</button>
+              </div>
+              <hr style="border:none; border-top:1px solid var(--border-color); margin:16px 0;">
+              <div class="form-group">
+                <label class="form-label" for="restore-file-input">バックアップJSONファイルを選択して復元</label>
+                <input type="file" id="restore-file-input" accept=".json,application/json" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label">復元時の既存データの扱い</label>
+                <select id="restore-mode-select" class="form-control">
+                  <option value="overwrite">既存データをすべて消去してバックアップ内容で完全置換（推奨）</option>
+                  <option value="merge">既存データを残して同一IDを上書き統合（マージ）</option>
+                </select>
+              </div>
+              <button type="button" class="btn btn-accent" id="btn-import-json">⬆️ JSONファイルを検証して復元</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🧪 動作確認用サンプルデータ / 初期化</div>
+            </div>
+            <div class="card-body">
+              <p style="font-size:13px; margin-bottom:12px;">
+                前日・当日・翌日にまたがる案件別タスク（同日作業重複を含むWBS確認用データ）と確認事項を一括登録して、引き継ぎやWBS重複チェックをすぐに試せます。
+              </p>
+              <button type="button" class="btn" id="btn-load-sample-data">✨ サンプルデータを投入する</button>
+
+              <hr style="border:none; border-top:1px solid var(--border-color); margin:16px 0;">
+              <p style="font-size:12px; color:var(--danger); margin-bottom:8px;">
+                【危険】ブラウザ内のすべてのデータを完全に消去し、初期状態に戻します。
+              </p>
+              <button type="button" class="btn btn-danger" id="btn-clear-all-data">🗑️ 全データを初期化する</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==========================================
+       MODALS
+       ========================================== -->
+
+  <!-- Project Add/Edit Modal -->
+  <div class="modal-backdrop" id="modal-project">
+    <div class="modal-dialog" style="max-width:480px;">
+      <div class="modal-header">
+        <span id="modal-project-title">案件の登録</span>
+        <button type="button" class="btn btn-sm" data-close-modal="modal-project">✕</button>
+      </div>
+      <form id="form-project">
+        <div class="modal-body">
+          <input type="hidden" id="project-id-input">
+          <div class="form-group">
+            <label class="form-label" for="project-name-input">案件名 <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="project-name-input" class="form-control" required placeholder="例: 案件A / 障害・問い合わせ対応">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="project-desc-input">備考</label>
+            <textarea id="project-desc-input" class="form-control" placeholder="案件に関するメモ・備考"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" data-close-modal="modal-project">キャンセル</button>
+          <button type="submit" class="btn btn-primary">保存する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Task Add/Edit Modal (メール・テキスト貼り付け機能統合) -->
+  <div class="modal-backdrop" id="modal-task">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <span id="modal-task-title">タスクの登録・編集</span>
+        <button type="button" class="btn btn-sm" data-close-modal="modal-task">✕</button>
+      </div>
+      <form id="form-task">
+        <div class="modal-body">
+          <input type="hidden" id="task-id-input">
+
+          <!-- メール・テキスト貼り付け補助欄 -->
+          <div class="form-group" style="background:#f8fafc; padding:10px; border:1px dashed var(--border-color); border-radius:var(--radius);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:4px;">
+              <label class="form-label" for="task-raw-input" style="margin:0;">📋 元文章貼り付け（メール本文・障害通知・進捗管理ファイル等）</label>
+              <button type="button" class="btn btn-sm" id="btn-extract-task-from-raw">↓ 1行目を「作業内容」・残りを「詳細作業内容」へ転記</button>
+            </div>
+            <textarea id="task-raw-input" class="form-control" style="min-height:56px;" placeholder="メールやチャット本文をここに貼り付けると、元文章としてタスクに保持しつつ下の項目へ転記できます（AIによる勝手な要約や改変は行いません）"></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="task-project-select">案件 <span style="color:var(--danger)">*</span></label>
+              <select id="task-project-select" class="form-control" required></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="task-status-select">状態 <span style="color:var(--danger)">*</span></label>
+              <select id="task-status-select" class="form-control" required>
+                <option value="未着手">未着手</option>
+                <option value="対応中">対応中</option>
+                <option value="完了">完了</option>
+                <option value="要確認">要確認</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="task-title-input">作業内容（親項目・見出し・件名） <span style="color:var(--danger)">*</span></label>
+              <input type="text" id="task-title-input" class="form-control" list="datalist-task-titles" required placeholder="例: 設定作業 / 定例会 / 障害対応">
+              <p class="helper-text">同じ案件内で同じ「作業内容」のタスクは「・作業内容」の下にツリー表示されます</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="task-assignee-input">担当者</label>
+              <input type="text" id="task-assignee-input" class="form-control" list="datalist-assignees" placeholder="例: 田中さん（未入力でも可）">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="task-desc-input">詳細作業内容（省略時は作業内容と同じ。複数行可）</label>
+            <textarea id="task-desc-input" class="form-control" style="min-height:56px;" placeholder="空欄の場合は「作業内容」が出力されます。詳細な作業内容やメール内容を入力できます"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="task-decision-input">判断・対応方針 / 備考（任意）</label>
+            <input type="text" id="task-decision-input" class="form-control" placeholder="入力するとタスク行の下に「判断・対応方針：...」として出力されます">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="task-created-date">登録日</label>
+              <input type="date" id="task-created-date" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="task-scheduled-date">予定日（開始予定）</label>
+              <input type="date" id="task-scheduled-date" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="task-performed-date">実施日（作業日・終了予定）</label>
+              <input type="date" id="task-performed-date" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="task-completed-date">完了日</label>
+              <input type="date" id="task-completed-date" class="form-control">
+            </div>
+          </div>
+          <p class="helper-text">
+            ※WBSでは「予定日〜実施日（または完了日）」の期間がバーとして表示されます。状態を「完了」にすると完了日が自動設定され、「完了」以外に戻すと完了日はクリアされます。
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" data-close-modal="modal-task">キャンセル</button>
+          <button type="submit" class="btn btn-primary">保存する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Check Section Modal (確認セクション専用) -->
+  <div class="modal-backdrop" id="modal-source">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <span id="modal-source-title">確認事項（確認セクション）の登録・編集</span>
+        <button type="button" class="btn btn-sm" data-close-modal="modal-source">✕</button>
+      </div>
+      <form id="form-source">
+        <div class="modal-body">
+          <input type="hidden" id="source-id-input">
+          <div class="form-group" style="background:#f8fafc; padding:10px; border:1px dashed var(--border-color); border-radius:var(--radius);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label class="form-label" for="source-raw-input" style="margin:0;">📋 元文章貼り付け（メール本文等）</label>
+              <button type="button" class="btn btn-sm" id="btn-extract-from-raw">↓ 1行目を確認項目・残りを内容へ転記</button>
+            </div>
+            <textarea id="source-raw-input" class="form-control" placeholder="ここにテキストを貼り付けると、元文章として保存しつつ下の項目へ整理できます"></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="source-date-input">対象日付 <span style="color:var(--danger)">*</span></label>
+              <input type="date" id="source-date-input" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="source-project-select">関連案件（任意）</label>
+              <select id="source-project-select" class="form-control">
+                <option value="">（案件指定なし）</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="source-subject-input">確認項目・件名 <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="source-subject-input" class="form-control" required placeholder="例: 日付や担当者など、確認が必要な情報">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="source-content-input">内容・詳細（任意）</label>
+            <textarea id="source-content-input" class="form-control" placeholder="出力時に「 内容：...」として表示されます"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="source-decision-input">判断・対応方針（任意）</label>
+            <input type="text" id="source-decision-input" class="form-control" placeholder="入力すると「 判断・対応方針：...」として出力されます">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" data-close-modal="modal-source">キャンセル</button>
+          <button type="submit" class="btn btn-primary">保存する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Pick Existing Uncompleted Task Modal -->
+  <div class="modal-backdrop" id="modal-pick-task">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <span>既存タスクから当日の朝会へ追加</span>
+        <button type="button" class="btn btn-sm" data-close-modal="modal-pick-task">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+          当日のリストにまだ含まれていない未完了タスクの一覧です。タスクの登録日や実施日を変更せずに当日の朝会対象へ追加します。
+        </p>
+        <div id="pick-task-list-container"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" data-close-modal="modal-pick-task">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fallback Copy / View Text Modal -->
+  <div class="modal-backdrop" id="modal-text-viewer">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <span id="modal-text-viewer-title">テキスト表示・手動コピー</span>
+        <button type="button" class="btn btn-sm" data-close-modal="modal-text-viewer">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="modal-text-viewer-desc" style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">
+          全文を選択して Ctrl+C (Macは ⌘+C) でコピーできます。
+        </p>
+        <textarea id="modal-text-viewer-textarea" class="preview-textarea" style="height:360px;" readonly></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-accent" id="btn-modal-copy-text">📋 クリップボードにコピー</button>
+        <button type="button" class="btn" data-close-modal="modal-text-viewer">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Script -->
+  <script type="module">
+    /**
+     * ============================================================================
+     * 1. js/utils.js - 日付処理・共通関数 (UTCずれ防止・ローカル日付厳守)
+     * ============================================================================
+     */
+    const WEEKDAYS_JA = ['日', '月', '火', '水', '木', '金', '土'];
+
+    const Utils = {
+      getTodaySlash() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        return `${y}/${m}/${d}`;
+      },
+
+      slashToHyphen(slashDate) {
+        if (!slashDate || typeof slashDate !== 'string') return '';
+        return slashDate.trim().replace(/\//g, '-');
+      },
+
+      hyphenToSlash(hyphenDate) {
+        if (!hyphenDate || typeof hyphenDate !== 'string') return '';
+        return hyphenDate.trim().replace(/-/g, '/');
+      },
+
+      addDaysSlash(slashDate, diffDays) {
+        const parts = slashDate.split(/[\/\-]/).map(Number);
+        if (parts.length !== 3 || parts.some(isNaN)) return this.getTodaySlash();
+        const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+        dt.setDate(dt.getDate() + diffDays);
+        const y = dt.getFullYear();
+        const m = String(dt.getMonth() + 1).padStart(2, '0');
+        const d = String(dt.getDate()).padStart(2, '0');
+        return `${y}/${m}/${d}`;
+      },
+
+      getDayInfo(slashDate) {
+        const parts = slashDate.split(/[\/\-]/).map(Number);
+        const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+        const dow = dt.getDay();
+        return {
+          slash: slashDate,
+          monthDay: `${parts[1]}/${parts[2]}`,
+          dayNum: String(parts[2]),
+          weekday: WEEKDAYS_JA[dow],
+          dow
+        };
+      },
+
+      getLocalTimestamp() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const ss = String(now.getSeconds()).padStart(2, '0');
+        return `${y}/${m}/${d} ${hh}:${mm}:${ss}`;
+      },
+
+      generateId(prefix = 'id') {
+        const rand = Math.random().toString(36).substring(2, 8);
+        return `${prefix}_${Date.now()}_${rand}`;
+      },
+
+      escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      },
+
+      notify(message, type = 'info') {
+        const area = document.getElementById('notification-area');
+        if (!area) return;
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+          <span>${this.escapeHtml(message)}</span>
+          <button type="button" style="background:none;border:none;color:#fff;cursor:pointer;font-weight:bold;">✕</button>
+        `;
+        toast.querySelector('button').addEventListener('click', () => toast.remove());
+        area.appendChild(toast);
+        setTimeout(() => {
+          if (toast.parentNode) toast.remove();
+        }, 4000);
+      },
+
+      async copyToClipboard(text, fallbackTitle = '朝会テキストの手動コピー') {
+        if (navigator.clipboard && window.isSecureContext) {
+          try {
+            await navigator.clipboard.writeText(text);
+            this.notify('クリップボードにコピーしました。', 'success');
+            return true;
+          } catch (err) {
+            // Fallthrough to manual modal
+          }
+        }
+        try {
+          const temp = document.createElement('textarea');
+          temp.value = text;
+          temp.style.position = 'fixed';
+          temp.style.left = '-9999px';
+          document.body.appendChild(temp);
+          temp.select();
+          const ok = document.execCommand('copy');
+          document.body.removeChild(temp);
+          if (ok) {
+            this.notify('クリップボードにコピーしました。', 'success');
+            return true;
+          }
+        } catch (e) {
+          // Fallthrough
+        }
+        openTextViewerModal(fallbackTitle, text, 'クリップボードへの自動コピーが制限されているため、以下から手動でコピーしてください。');
+        return false;
+      }
+    };
+
+    /**
+     * ============================================================================
+     * 2. js/db.js - IndexedDBの初期化・トランザクションCRUD処理
+     * ============================================================================
+     */
+    const DB_NAME = 'PersonalMorningMeetingOrganizerDB';
+    const DB_VERSION = 1;
+
+    class AppDatabase {
+      constructor() {
+        this.db = null;
+      }
+
+      async init() {
+        if (!window.indexedDB) {
+          throw new Error('お使いのブラウザではIndexedDBが利用できません。');
+        }
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(DB_NAME, DB_VERSION);
+
+          req.onupgradeneeded = (event) => {
+            const db = event.target.result;
+
+            if (!db.objectStoreNames.contains('projects')) {
+              db.createObjectStore('projects', { keyPath: 'id' });
+            }
+
+            if (!db.objectStoreNames.contains('tasks')) {
+              const taskStore = db.createObjectStore('tasks', { keyPath: 'id' });
+              taskStore.createIndex('projectId', 'projectId', { unique: false });
+              taskStore.createIndex('status', 'status', { unique: false });
+              taskStore.createIndex('scheduledDate', 'scheduledDate', { unique: false });
+              taskStore.createIndex('createdAt', 'createdAt', { unique: false });
+              taskStore.createIndex('completedAt', 'completedDate', { unique: false });
+            }
+
+            if (!db.objectStoreNames.contains('dailyMeetings')) {
+              db.createObjectStore('dailyMeetings', { keyPath: 'date' });
+            }
+
+            if (!db.objectStoreNames.contains('sources')) {
+              const sourceStore = db.createObjectStore('sources', { keyPath: 'id' });
+              sourceStore.createIndex('date', 'date', { unique: false });
+              sourceStore.createIndex('type', 'type', { unique: false });
+              sourceStore.createIndex('projectId', 'projectId', { unique: false });
+              sourceStore.createIndex('createdAt', 'createdAt', { unique: false });
+            }
+
+            if (!db.objectStoreNames.contains('settings')) {
+              db.createObjectStore('settings', { keyPath: 'key' });
+            }
+          };
+
+          req.onsuccess = (event) => {
+            this.db = event.target.result;
+            resolve(this.db);
+          };
+
+          req.onerror = () => {
+            reject(new Error('IndexedDBの初期化に失敗しました: ' + (req.error?.message || '不明なエラー')));
+          };
+        });
+      }
+
+      async getAll(storeName) {
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction(storeName, 'readonly');
+          const store = tx.objectStore(storeName);
+          const req = store.getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(new Error(`${storeName}の取得に失敗しました`));
+        });
+      }
+
+      async put(storeName, item) {
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction(storeName, 'readwrite');
+          const store = tx.objectStore(storeName);
+          store.put(item);
+          tx.oncomplete = () => resolve(item);
+          tx.onerror = () => reject(new Error(`${storeName}への保存に失敗しました: ` + (tx.error?.message || '')));
+          tx.onabort = () => reject(new Error(`${storeName}への保存トランザクションが中断されました`));
+        });
+      }
+
+      async delete(storeName, key) {
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction(storeName, 'readwrite');
+          const store = tx.objectStore(storeName);
+          store.delete(key);
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(new Error(`${storeName}からの削除に失敗しました`));
+        });
+      }
+
+      async clearAllStores() {
+        const stores = ['projects', 'tasks', 'dailyMeetings', 'sources', 'settings'];
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction(stores, 'readwrite');
+          stores.forEach(s => tx.objectStore(s).clear());
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(new Error('全データの初期化に失敗しました'));
+        });
+      }
+
+      async restoreBackupData(payload, mode = 'overwrite') {
+        const stores = ['projects', 'tasks', 'dailyMeetings', 'sources', 'settings'];
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction(stores, 'readwrite');
+          if (mode === 'overwrite') {
+            stores.forEach(s => tx.objectStore(s).clear());
+          }
+          (payload.projects || []).forEach(item => tx.objectStore('projects').put(item));
+          (payload.tasks || []).forEach(item => tx.objectStore('tasks').put(item));
+          (payload.dailyMeetings || []).forEach(item => tx.objectStore('dailyMeetings').put(item));
+          (payload.sources || []).forEach(item => tx.objectStore('sources').put(item));
+          (payload.settings || []).forEach(item => tx.objectStore('settings').put(item));
+
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(new Error('バックアップ復元トランザクションが失敗しました: ' + (tx.error?.message || '')));
+        });
+      }
+    }
+
+    const db = new AppDatabase();
+
+    /**
+     * ============================================================================
+     * 3. デフォルト設定・状態管理
+     * ============================================================================
+     */
+    const DEFAULT_TEMPLATE_SETTINGS = {
+      projectBorder: '##########',
+      checkSection: '【確認事項】',
+      omitEmptySections: true,
+      schemaVersion: 4
+    };
+
+    const state = {
+      currentDate: Utils.getTodaySlash(),
+      wbsStartDate: Utils.addDaysSlash(Utils.getTodaySlash(), -3),
+      wbsDaysCount: 14,
+      projects: [],
+      tasks: [],
+      dailyMeetings: [],
+      sources: [],
+      templateSettings: { ...DEFAULT_TEMPLATE_SETTINGS },
+      selectedMgmtProjectId: null,
+      isSaving: false
+    };
+
+    async function migrateLegacySectionSourcesIfNeeded() {
+      const allSources = await db.getAll('sources');
+      const legacySources = allSources.filter(s => s.type !== 'checkSection' && s.type !== 'check');
+      if (legacySources.length === 0) return;
+
+      const allProjects = await db.getAll('projects');
+      let defaultProj = allProjects[0];
+      const nowTs = Utils.getLocalTimestamp();
+
+      if (!defaultProj) {
+        defaultProj = {
+          id: Utils.generateId('proj'),
+          name: '共通・その他案件',
+          description: '旧セクションから自動移行されたタスク用案件',
+          createdAt: nowTs,
+          updatedAt: nowTs
+        };
+        await db.put('projects', defaultProj);
+      }
+
+      for (const s of legacySources) {
+        if (s.type === 'check') {
+          s.type = 'checkSection';
+          await db.put('sources', s);
+          continue;
+        }
+        const targetProjId = s.projectId || defaultProj.id;
+        const migratedTask = {
+          id: Utils.generateId('task_mig'),
+          projectId: targetProjId,
+          title: s.subject || '移行タスク',
+          description: s.content && s.content.trim() ? s.content.trim() : (s.subject || '移行タスク'),
+          decision: s.decision || '',
+          sourceText: s.sourceText || '',
+          assignee: '',
+          status: '対応中',
+          createdDate: s.date || Utils.getTodaySlash(),
+          scheduledDate: s.date || Utils.getTodaySlash(),
+          performedDate: s.date || Utils.getTodaySlash(),
+          completedDate: '',
+          createdAt: s.createdAt || nowTs,
+          updatedAt: nowTs
+        };
+        await db.put('tasks', migratedTask);
+        await db.delete('sources', s.id);
+      }
+
+      for (const s of allSources) {
+        if (s.type === 'check') {
+          s.type = 'checkSection';
+          await db.put('sources', s);
+        }
+      }
+    }
+
+    /**
+     * ============================================================================
+     * 4. js/meetings.js - 朝会テキストの生成・引き継ぎ処理・WBS期間計算
+     * ============================================================================
+     */
+    const MeetingGenerator = {
+      getNormalizedTemplate(rawTpl = {}) {
+        const merged = { ...DEFAULT_TEMPLATE_SETTINGS, ...rawTpl };
+        if (!merged.checkSection && rawTpl.headerCheck) {
+          merged.checkSection = rawTpl.headerCheck;
+        }
+        if (!merged.projectBorder) {
+          merged.projectBorder = '##########';
+        }
+        merged.schemaVersion = 4;
+        return merged;
+      },
+
+      getCheckSectionHeader(rawTpl) {
+        const tpl = this.getNormalizedTemplate(rawTpl || state.templateSettings);
+        return (tpl.checkSection || '【確認事項】').trim();
+      },
+
+      getTasksForDate(targetDate, includeCompletedToday = true) {
+        const meetingRecord = state.dailyMeetings.find(m => m.date === targetDate);
+        const carriedIds = new Set(meetingRecord?.taskIds || []);
+
+        return state.tasks.filter(task => {
+          const isExplicitlyInMeeting = carriedIds.has(task.id);
+          const isDateMatched =
+            task.scheduledDate === targetDate ||
+            task.performedDate === targetDate ||
+            task.completedDate === targetDate ||
+            (task.createdDate === targetDate && task.status !== '完了');
+
+          if (!isExplicitlyInMeeting && !isDateMatched) return false;
+
+          if (task.status === '完了') {
+            if (!includeCompletedToday) return false;
+            return (
+              task.completedDate === targetDate ||
+              task.performedDate === targetDate ||
+              isExplicitlyInMeeting
+            );
+          }
+          return true;
+        });
+      },
+
+      getTaskDisplayDate(task) {
+        if (task.status === '完了') {
+          return task.performedDate || task.completedDate || task.scheduledDate || task.createdDate || '日付未定';
+        }
+        return task.performedDate || task.scheduledDate || task.createdDate || '日付未定';
+      },
+
+      /**
+       * WBS用のタスク開始日〜終了日を算出する
+       * 予定日・実施日・完了日（または登録日）からタスクの稼働期間を求める
+       */
+      getTaskDateSpan(task) {
+        const activeDates = [
+          task.scheduledDate,
+          task.performedDate,
+          task.status === '完了' ? task.completedDate : ''
+        ].filter(Boolean).sort();
+
+        if (activeDates.length === 0) {
+          if (task.createdDate) {
+            return { start: task.createdDate, end: task.createdDate, isUndecided: true };
+          }
+          return { start: '', end: '', isUndecided: true };
+        }
+        return {
+          start: activeDates[0],
+          end: activeDates[activeDates.length - 1],
+          isUndecided: false
+        };
+      },
+
+      isTaskActiveOnDate(task, slashDate) {
+        const span = this.getTaskDateSpan(task);
+        if (!span.start || !span.end) return false;
+        return slashDate >= span.start && slashDate <= span.end;
+      },
+
+      formatSourceLines(items) {
+        const lines = [];
+        items.forEach(item => {
+          const proj = state.projects.find(p => p.id === item.projectId);
+          const projPrefix = proj ? `[${proj.name}] ` : '';
+          lines.push(`・${projPrefix}${item.subject}`);
+          if (item.content && item.content.trim()) {
+            const contentLines = item.content.trim().split(/\r?\n/);
+            lines.push(` 内容：${contentLines[0]}`);
+            for (let i = 1; i < contentLines.length; i++) {
+              lines.push(`    ${contentLines[i]}`);
+            }
+          }
+          if (item.decision && item.decision.trim()) {
+            lines.push(` 判断・対応方針：${item.decision.trim()}`);
+          }
+        });
+        return lines;
+      },
+
+      generateText(targetDate) {
+        const tpl = this.getNormalizedTemplate(state.templateSettings);
+        const lines = [];
+
+        lines.push(targetDate);
+
+        const targetTasks = this.getTasksForDate(targetDate, true);
+        const projectsWithTasks = [];
+
+        state.projects.forEach(proj => {
+          const pTasks = targetTasks.filter(t => t.projectId === proj.id);
+          if (pTasks.length > 0) {
+            projectsWithTasks.push({ project: proj, tasks: pTasks });
+          }
+        });
+
+        projectsWithTasks.forEach(({ project, tasks }) => {
+          lines.push(tpl.projectBorder);
+          lines.push(project.name);
+          lines.push(tpl.projectBorder);
+
+          const groupedByTitle = new Map();
+          tasks.forEach(t => {
+            const key = t.title.trim();
+            if (!groupedByTitle.has(key)) groupedByTitle.set(key, []);
+            groupedByTitle.get(key).push(t);
+          });
+
+          groupedByTitle.forEach((groupTasks, title) => {
+            lines.push(`・${title}`);
+            groupTasks.sort((a, b) => {
+              const da = this.getTaskDisplayDate(a);
+              const dbDate = this.getTaskDisplayDate(b);
+              return da.localeCompare(dbDate);
+            });
+
+            groupTasks.forEach(t => {
+              const dispDate = this.getTaskDisplayDate(t);
+              const assigneeStr = t.assignee && t.assignee.trim() ? t.assignee.trim() : '担当者未定';
+              const detailText = (t.description && t.description.trim()) ? t.description.trim() : t.title.trim();
+              const detailLines = detailText.split(/\r?\n/);
+
+              lines.push(` →${dispDate} ${assigneeStr}`);
+              lines.push(`   ${detailLines[0]}（${t.status}）`);
+              for (let i = 1; i < detailLines.length; i++) {
+                lines.push(`   ${detailLines[i]}`);
+              }
+              if (t.decision && t.decision.trim()) {
+                lines.push(`   判断・対応方針：${t.decision.trim()}`);
+              }
+            });
+          });
+        });
+
+        const checkHeader = this.getCheckSectionHeader(tpl);
+        if (checkHeader) {
+          const checkLines = [];
+          const dayCheckSources = state.sources.filter(
+            s => s.date === targetDate && (s.type === 'checkSection' || s.type === 'check')
+          );
+          checkLines.push(...this.formatSourceLines(dayCheckSources));
+
+          targetTasks.forEach(t => {
+            const noDate = !t.scheduledDate && !t.performedDate && !t.completedDate;
+            const noAssignee = !t.assignee || !t.assignee.trim();
+            if (t.status === '要確認' || noDate || noAssignee) {
+              const proj = state.projects.find(p => p.id === t.projectId);
+              const pName = proj ? `[${proj.name}] ` : '';
+              const reasons = [];
+              if (t.status === '要確認') reasons.push('要確認状態');
+              if (noDate) reasons.push('日付未設定');
+              if (noAssignee) reasons.push('担当者未設定');
+              checkLines.push(`・${pName}${t.title}（${reasons.join('・')}）`);
+            }
+          });
+
+          if (checkLines.length > 0 || !tpl.omitEmptySections) {
+            lines.push(checkHeader);
+            lines.push(...checkLines);
+          }
+        }
+
+        return lines.join('\n');
+      }
+    };
+
+    /**
+     * ============================================================================
+     * 5. アプリケーション画面描画・イベント制御
+     * ============================================================================
+     */
+
+    async function reloadAllDataFromDB() {
+      const [projects, tasks, dailyMeetings, sources, settingsList] = await Promise.all([
+        db.getAll('projects'),
+        db.getAll('tasks'),
+        db.getAll('dailyMeetings'),
+        db.getAll('sources'),
+        db.getAll('settings')
+      ]);
+
+      state.projects = projects.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+      state.tasks = tasks;
+      state.dailyMeetings = dailyMeetings;
+      state.sources = sources;
+
+      const tplSetting = settingsList.find(s => s.key === 'templateSettings');
+      if (tplSetting && tplSetting.value) {
+        state.templateSettings = MeetingGenerator.getNormalizedTemplate(tplSetting.value);
+      } else {
+        state.templateSettings = { ...DEFAULT_TEMPLATE_SETTINGS };
+      }
+
+      updateAutocompleteDatalists();
+    }
+
+    function updateAutocompleteDatalists() {
+      const assignees = new Set();
+      const titles = new Set();
+
+      state.tasks.forEach(t => {
+        if (t.assignee && t.assignee.trim()) assignees.add(t.assignee.trim());
+        if (t.title && t.title.trim()) titles.add(t.title.trim());
+      });
+
+      const dlAssignees = document.getElementById('datalist-assignees');
+      dlAssignees.innerHTML = Array.from(assignees)
+        .map(a => `<option value="${Utils.escapeHtml(a)}"></option>`)
+        .join('');
+
+      const dlTitles = document.getElementById('datalist-task-titles');
+      dlTitles.innerHTML = Array.from(titles)
+        .map(t => `<option value="${Utils.escapeHtml(t)}"></option>`)
+        .join('');
+
+      // Update WBS assignee filter dropdown
+      const wbsAssigneeSelect = document.getElementById('wbs-filter-assignee');
+      if (wbsAssigneeSelect) {
+        const currentVal = wbsAssigneeSelect.value;
+        wbsAssigneeSelect.innerHTML = `<option value="">すべての担当者</option>` +
+          Array.from(assignees).map(a => `<option value="${Utils.escapeHtml(a)}">${Utils.escapeHtml(a)}</option>`).join('');
+        wbsAssigneeSelect.value = currentVal;
+      }
+    }
+
+    // --- Navigation ---
+    function setupNavigation() {
+      const tabs = document.querySelectorAll('.nav-tab');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+
+          const targetId = tab.getAttribute('data-target');
+          document.querySelectorAll('.view-panel').forEach(p => {
+            p.classList.toggle('active', p.id === targetId);
+          });
+
+          if (targetId === 'view-meeting') renderMeetingView();
+          if (targetId === 'view-projects') renderProjectsAndTasksView();
+          if (targetId === 'view-wbs') renderWbsView();
+          if (targetId === 'view-search') executeSearch();
+          if (targetId === 'view-settings') renderSettingsView();
+        });
+      });
+    }
+
+    // --- Modal Helpers ---
+    function openModal(modalId) {
+      const el = document.getElementById(modalId);
+      if (el) el.classList.add('open');
+    }
+
+    function closeModal(modalId) {
+      const el = document.getElementById(modalId);
+      if (el) el.classList.remove('open');
+    }
+
+    function openTextViewerModal(title, text, desc = '') {
+      document.getElementById('modal-text-viewer-title').textContent = title;
+      document.getElementById('modal-text-viewer-desc').textContent = desc || '全文を選択してコピーできます。';
+      const ta = document.getElementById('modal-text-viewer-textarea');
+      ta.value = text;
+      openModal('modal-text-viewer');
+      setTimeout(() => {
+        ta.focus();
+        ta.select();
+      }, 50);
+    }
+
+    /**
+     * ============================================================================
+     * VIEW 1: 朝会作成画面の描画と操作
+     * ============================================================================
+     */
+    function renderMeetingView(preserveManualPreview = true) {
+      const targetDate = state.currentDate;
+      document.getElementById('meeting-date-input').value = Utils.slashToHyphen(targetDate);
+      document.getElementById('meeting-date-formatted').textContent = targetDate;
+
+      const existingMeeting = state.dailyMeetings.find(m => m.date === targetDate);
+      const savedIndicator = document.getElementById('meeting-saved-indicator');
+      if (existingMeeting) {
+        savedIndicator.textContent = `保存済 (${existingMeeting.updatedAt || ''})`;
+        savedIndicator.style.background = '#dcfce7';
+        savedIndicator.style.color = '#15803d';
+      } else {
+        savedIndicator.textContent = '未保存';
+        savedIndicator.style.background = '#e2e8f0';
+        savedIndicator.style.color = '#475569';
+      }
+
+      const showCompletedToday = document.getElementById('chk-show-completed-today').checked;
+      const tasksForDay = MeetingGenerator.getTasksForDate(targetDate, showCompletedToday);
+      const tasksContainer = document.getElementById('meeting-tasks-container');
+
+      if (state.projects.length === 0) {
+        tasksContainer.innerHTML = `
+          <div class="empty-state">
+            まだ案件が登録されていません。「＋ 新規案件追加」または「5. 設定・データ管理 ＞ サンプルデータを投入する」から案件を作成してください。
+          </div>
+        `;
+      } else {
+        let html = '';
+        state.projects.forEach(proj => {
+          const pTasks = tasksForDay.filter(t => t.projectId === proj.id);
+          html += `
+            <div class="project-group">
+              <div class="project-group-header">
+                <span>📁 ${Utils.escapeHtml(proj.name)} <span class="badge" style="background:#e2e8f0;">${pTasks.length}件</span></span>
+                <button type="button" class="btn btn-sm" data-quick-add-for-project="${Utils.escapeHtml(proj.id)}">＋ この案件にタスク追加</button>
+              </div>
+              <div>
+                ${pTasks.length === 0
+                  ? `<div style="padding:10px 12px; font-size:12px; color:var(--text-muted);">当日の表示対象タスクはありません</div>`
+                  : pTasks.map(t => renderMeetingTaskRow(t, targetDate)).join('')}
+              </div>
+            </div>
+          `;
+        });
+        tasksContainer.innerHTML = html;
+      }
+
+      const checkHeader = MeetingGenerator.getCheckSectionHeader();
+      document.getElementById('meeting-check-section-title').textContent = `⚠️ 確認セクション（${checkHeader || '見出し未設定'}）`;
+
+      const checkSourcesContainer = document.getElementById('meeting-check-sources-container');
+      const manualCheckItems = state.sources.filter(
+        s => s.date === targetDate && (s.type === 'checkSection' || s.type === 'check')
+      );
+      if (manualCheckItems.length === 0) {
+        checkSourcesContainer.innerHTML = `<div style="padding:6px 10px; font-size:12px; color:var(--text-muted); border:1px dashed #cbd5e1; border-radius:4px;">登録済みの確認事項はありません（「＋ 確認事項を追加」から登録できます）</div>`;
+      } else {
+        checkSourcesContainer.innerHTML = `
+          <div class="source-section-block" style="margin:0;">
+            ${manualCheckItems.map(item => renderSourceItemRow(item)).join('')}
+          </div>
+        `;
+      }
+
+      const checkTasksContainer = document.getElementById('meeting-check-tasks-container');
+      const checkTargetTasks = MeetingGenerator.getTasksForDate(targetDate, true).filter(t => {
+        const noDate = !t.scheduledDate && !t.performedDate && !t.completedDate;
+        const noAssignee = !t.assignee || !t.assignee.trim();
+        return t.status === '要確認' || noDate || noAssignee;
+      });
+
+      if (checkTargetTasks.length === 0) {
+        checkTasksContainer.innerHTML = `<div style="padding:6px 10px; font-size:12px; color:var(--text-muted); border:1px dashed #cbd5e1; border-radius:4px;">該当する要確認タスクはありません</div>`;
+      } else {
+        checkTasksContainer.innerHTML = `
+          <div class="source-section-block" style="margin:0;">
+            ${checkTargetTasks.map(t => {
+              const proj = state.projects.find(p => p.id === t.projectId);
+              const reasons = [];
+              if (t.status === '要確認') reasons.push('状態:要確認');
+              if (!t.scheduledDate && !t.performedDate && !t.completedDate) reasons.push('日付未定');
+              if (!t.assignee || !t.assignee.trim()) reasons.push('担当者未定');
+              return `
+                <div class="source-item">
+                  <div class="source-content-wrap">
+                    <span class="badge status-要確認">${Utils.escapeHtml(reasons.join(' / '))}</span>
+                    <span class="source-subject" style="margin-left:6px;">[${Utils.escapeHtml(proj ? proj.name : '不明')}] ${Utils.escapeHtml(t.title)}</span>
+                  </div>
+                  <div style="display:flex; gap:4px;">
+                    <button type="button" class="btn btn-sm" data-edit-task="${Utils.escapeHtml(t.id)}">タスク編集</button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
+
+      updatePreviewArea(preserveManualPreview);
+    }
+
+    function renderSourceItemRow(item) {
+      const proj = state.projects.find(p => p.id === item.projectId);
+      return `
+        <div class="source-item">
+          <div class="source-content-wrap">
+            <div class="source-subject">
+              ${proj ? `<span class="badge" style="background:#e2e8f0; margin-right:4px;">${Utils.escapeHtml(proj.name)}</span>` : ''}
+              ${Utils.escapeHtml(item.subject)}
+            </div>
+            ${item.content ? `<div class="source-detail">内容：${Utils.escapeHtml(item.content)}</div>` : ''}
+            ${item.decision ? `<div class="source-detail">判断・対応方針：${Utils.escapeHtml(item.decision)}</div>` : ''}
+            ${item.sourceText ? `<div class="helper-text">📄 元文章保持あり</div>` : ''}
+          </div>
+          <div style="display:flex; gap:4px; flex-shrink:0;">
+            <button type="button" class="btn btn-sm" data-edit-source="${Utils.escapeHtml(item.id)}">編集</button>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-delete-source="${Utils.escapeHtml(item.id)}">削除</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMeetingTaskRow(task) {
+      const isCompleted = task.status === '完了';
+      const dispDate = MeetingGenerator.getTaskDisplayDate(task);
+      const hasDistinctDetail = task.description && task.description.trim() && task.description.trim() !== task.title.trim();
+
+      return `
+        <div class="task-item ${isCompleted ? 'is-completed' : ''}">
+          <div class="task-main-info">
+            <div class="task-title-line">
+              <span class="badge status-${Utils.escapeHtml(task.status)}">${Utils.escapeHtml(task.status)}</span>
+              <span>・${Utils.escapeHtml(task.title)}</span>
+              ${task.sourceText ? `<span class="badge" style="background:#f1f5f9; color:#475569; font-weight:normal;">📄 元文章あり</span>` : ''}
+            </div>
+            ${hasDistinctDetail ? `<div class="task-detail-line">${Utils.escapeHtml(task.description)}</div>` : ''}
+            ${task.decision ? `<div class="task-detail-line" style="border-left-color:#0f766e; color:#0f766e;">判断・対応方針：${Utils.escapeHtml(task.decision)}</div>` : ''}
+            <div class="task-meta-line">
+              <span>👤 ${Utils.escapeHtml(task.assignee || '担当者未定')}</span>
+              <span>📅 表示日:${Utils.escapeHtml(dispDate)}</span>
+              <span>(登録:${Utils.escapeHtml(task.createdDate || '-')} / 予定:${Utils.escapeHtml(task.scheduledDate || '-')} / 実施:${Utils.escapeHtml(task.performedDate || '-')} / 完了:${Utils.escapeHtml(task.completedDate || '-')})</span>
+            </div>
+          </div>
+          <div class="task-actions">
+            <select class="form-control" style="width:auto; padding:2px 6px; font-size:12px;" data-quick-status-task="${Utils.escapeHtml(task.id)}" aria-label="タスク状態変更">
+              <option value="未着手" ${task.status === '未着手' ? 'selected' : ''}>未着手</option>
+              <option value="対応中" ${task.status === '対応中' ? 'selected' : ''}>対応中</option>
+              <option value="完了" ${task.status === '完了' ? 'selected' : ''}>完了</option>
+              <option value="要確認" ${task.status === '要確認' ? 'selected' : ''}>要確認</option>
+            </select>
+            <button type="button" class="btn btn-sm" data-edit-task="${Utils.escapeHtml(task.id)}">編集</button>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-remove-task-from-day="${Utils.escapeHtml(task.id)}" title="履歴は消さずに当日の表示対象から外す">除外</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function updatePreviewArea(preserveManual = true) {
+      const targetDate = state.currentDate;
+      const autoGenerated = MeetingGenerator.generateText(targetDate);
+      const previewEl = document.getElementById('meeting-preview-textarea');
+      const bannerEl = document.getElementById('preview-mode-banner');
+      const bannerText = document.getElementById('preview-mode-text');
+
+      const existingMeeting = state.dailyMeetings.find(m => m.date === targetDate);
+      const hasSavedManualEdit = existingMeeting &&
+        existingMeeting.editedText &&
+        existingMeeting.editedText !== existingMeeting.generatedText;
+
+      if (preserveManual && previewEl.dataset.manualEdited === 'true') {
+        return;
+      }
+
+      if (preserveManual && hasSavedManualEdit && previewEl.dataset.loadedDate !== targetDate) {
+        previewEl.value = existingMeeting.editedText;
+        previewEl.dataset.manualEdited = 'true';
+        previewEl.dataset.loadedDate = targetDate;
+        previewEl.classList.add('is-edited');
+        bannerEl.className = 'edit-state-banner manual';
+        bannerText.textContent = '直接編集モード（保存済みの直接編集テキストを表示中。「🔄 再生成」で最新構造データから再構成できます）';
+      } else {
+        previewEl.value = autoGenerated;
+        previewEl.dataset.manualEdited = 'false';
+        previewEl.dataset.loadedDate = targetDate;
+        previewEl.classList.remove('is-edited');
+        bannerEl.className = 'edit-state-banner auto';
+        bannerText.textContent = '自動生成モード（タスクや確認事項の変更が即時反映されます）';
+      }
+    }
+
+    /**
+     * 前日データの引き継ぎ処理 (仕様 9 準拠)
+     */
+    async function executeCarryOver() {
+      const targetDate = state.currentDate;
+      const prevDate = Utils.addDaysSlash(targetDate, -1);
+
+      const uncompletedTasks = state.tasks.filter(t => {
+        if (t.status === '完了') return false;
+        const compareDate = t.scheduledDate || t.performedDate || t.createdDate;
+        return !compareDate || compareDate <= prevDate;
+      });
+
+      let todayMeeting = state.dailyMeetings.find(m => m.date === targetDate);
+      const currentTaskIds = new Set(todayMeeting?.taskIds || []);
+
+      const currentDisplayedTasks = MeetingGenerator.getTasksForDate(targetDate, false);
+      currentDisplayedTasks.forEach(t => currentTaskIds.add(t.id));
+
+      let newlyAddedCount = 0;
+      let skippedDuplicateCount = 0;
+
+      uncompletedTasks.forEach(t => {
+        if (currentTaskIds.has(t.id)) {
+          skippedDuplicateCount++;
+        } else {
+          currentTaskIds.add(t.id);
+          newlyAddedCount++;
+        }
+      });
+
+      const nowTs = Utils.getLocalTimestamp();
+      const updatedMeeting = {
+        date: targetDate,
+        taskIds: Array.from(currentTaskIds),
+        generatedText: todayMeeting?.generatedText || '',
+        editedText: todayMeeting?.editedText || '',
+        createdAt: todayMeeting?.createdAt || nowTs,
+        updatedAt: nowTs
+      };
+
+      await db.put('dailyMeetings', updatedMeeting);
+      await reloadAllDataFromDB();
+
+      const previewEl = document.getElementById('meeting-preview-textarea');
+      previewEl.dataset.manualEdited = 'false';
+      renderMeetingView(false);
+
+      const resultBox = document.getElementById('carryover-result');
+      resultBox.style.display = 'block';
+      resultBox.innerHTML = `
+        <strong>✅ 引き継ぎ完了（前日: ${Utils.escapeHtml(prevDate)} → 当日: ${Utils.escapeHtml(targetDate)}）</strong>:
+        新規引き継ぎ <strong>${newlyAddedCount}件</strong> ／ 既に当日対象のため重複スキップ <strong>${skippedDuplicateCount}件</strong>
+        （前日の履歴・各タスクの登録日/実施日は変更していません）
+      `;
+      Utils.notify(`未完了タスクの引き継ぎを実行しました（新規${newlyAddedCount}件、重複スキップ${skippedDuplicateCount}件）`, 'success');
+    }
+
+    /**
+     * ============================================================================
+     * VIEW 2: 案件・タスク管理画面の描画
+     * ============================================================================
+     */
+    function renderProjectsAndTasksView() {
+      const pFilter = document.getElementById('project-filter-input').value.trim().toLowerCase();
+      const projectsContainer = document.getElementById('projects-list-container');
+
+      const filteredProjects = state.projects.filter(p => {
+        if (!pFilter) return true;
+        return p.name.toLowerCase().includes(pFilter) || (p.description || '').toLowerCase().includes(pFilter);
+      });
+
+      let pHtml = `
+        <div style="margin-bottom:8px;">
+          <button type="button" class="btn btn-sm ${state.selectedMgmtProjectId === null ? 'btn-primary' : ''}" id="btn-select-all-projects" style="width:100%;">
+            すべて表示 (${state.tasks.length}タスク)
+          </button>
+        </div>
+      `;
+
+      if (filteredProjects.length === 0) {
+        pHtml += `<div class="empty-state">案件が見つかりません</div>`;
+      } else {
+        filteredProjects.forEach(p => {
+          const taskCount = state.tasks.filter(t => t.projectId === p.id).length;
+          const isSelected = state.selectedMgmtProjectId === p.id;
+          pHtml += `
+            <div style="border:1px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'}; background:${isSelected ? 'var(--primary-light)' : '#fff'}; border-radius:var(--radius); padding:8px 10px; margin-bottom:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="cursor:pointer; flex:1;" data-select-mgmt-project="${Utils.escapeHtml(p.id)}">
+                  📁 ${Utils.escapeHtml(p.name)} <span class="badge" style="background:#e2e8f0;">${taskCount}</span>
+                </strong>
+                <div style="display:flex; gap:4px;">
+                  <button type="button" class="btn btn-sm" data-edit-project="${Utils.escapeHtml(p.id)}">編集</button>
+                  <button type="button" class="btn btn-sm btn-outline-danger" data-delete-project="${Utils.escapeHtml(p.id)}">削除</button>
+                </div>
+              </div>
+              ${p.description ? `<div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${Utils.escapeHtml(p.description)}</div>` : ''}
+              <div style="font-size:11px; color:var(--text-muted); margin-top:4px; font-family:var(--font-mono);">ID: ${Utils.escapeHtml(p.id)} / 更新: ${Utils.escapeHtml(p.updatedAt || '-')}</div>
+            </div>
+          `;
+        });
+      }
+      projectsContainer.innerHTML = pHtml;
+
+      const selectedProj = state.projects.find(p => p.id === state.selectedMgmtProjectId);
+      document.getElementById('selected-project-heading').textContent = selectedProj
+        ? `案件「${selectedProj.name}」のタスク一覧`
+        : 'すべての案件のタスク一覧';
+
+      const statusFilter = document.getElementById('task-filter-status').value;
+      const kwFilter = document.getElementById('task-filter-keyword').value.trim().toLowerCase();
+
+      const filteredTasks = state.tasks.filter(t => {
+        if (state.selectedMgmtProjectId && t.projectId !== state.selectedMgmtProjectId) return false;
+        if (statusFilter && t.status !== statusFilter) return false;
+        if (kwFilter) {
+          const hay = `${t.title} ${t.description || ''} ${t.decision || ''} ${t.assignee || ''} ${t.sourceText || ''}`.toLowerCase();
+          if (!hay.includes(kwFilter)) return false;
+        }
+        return true;
+      }).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+
+      const tbody = document.getElementById('mgmt-tasks-tbody');
+      if (filteredTasks.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="empty-state">条件に一致するタスクはありません</td></tr>`;
+      } else {
+        tbody.innerHTML = filteredTasks.map(t => {
+          const proj = state.projects.find(p => p.id === t.projectId);
+          return `
+            <tr>
+              <td><strong>${Utils.escapeHtml(proj ? proj.name : '不明な案件')}</strong></td>
+              <td>
+                <div style="font-weight:600;">${Utils.escapeHtml(t.title)}</div>
+                ${t.description && t.description !== t.title ? `<div style="font-size:12px; color:var(--text-muted); white-space:pre-wrap;">${Utils.escapeHtml(t.description)}</div>` : ''}
+                ${t.decision ? `<div style="font-size:12px; color:var(--accent);">判断・方針: ${Utils.escapeHtml(t.decision)}</div>` : ''}
+                ${t.sourceText ? `<div class="helper-text">📄 元文章保持あり</div>` : ''}
+              </td>
+              <td>${Utils.escapeHtml(t.assignee || '-')}</td>
+              <td><span class="badge status-${Utils.escapeHtml(t.status)}">${Utils.escapeHtml(t.status)}</span></td>
+              <td style="font-family:var(--font-mono); font-size:12px;">
+                登録: ${Utils.escapeHtml(t.createdDate || '-')}<br>
+                予定: ${Utils.escapeHtml(t.scheduledDate || '-')}<br>
+                実施: ${Utils.escapeHtml(t.performedDate || '-')}<br>
+                完了: ${Utils.escapeHtml(t.completedDate || '-')}
+              </td>
+              <td style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">${Utils.escapeHtml(t.updatedAt || '-')}</td>
+              <td>
+                <div style="display:flex; gap:4px;">
+                  <button type="button" class="btn btn-sm" data-edit-task="${Utils.escapeHtml(t.id)}">編集</button>
+                  <button type="button" class="btn btn-sm btn-outline-danger" data-delete-task="${Utils.escapeHtml(t.id)}">削除</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    /**
+     * ============================================================================
+     * VIEW 3: 対応スケジュール (WBS・重複可視化画面)
+     * ============================================================================
+     */
+    function renderWbsView() {
+      const startDate = state.wbsStartDate;
+      const daysCount = Number(document.getElementById('wbs-days-select').value) || 14;
+      state.wbsDaysCount = daysCount;
+      document.getElementById('wbs-start-date').value = Utils.slashToHyphen(startDate);
+
+      const assigneeFilter = document.getElementById('wbs-filter-assignee').value;
+      const overlapMode = document.getElementById('wbs-overlap-mode').value; // 'assignee' or 'all'
+      const showCompleted = document.getElementById('wbs-show-completed').checked;
+      const onlyOverlapped = document.getElementById('wbs-only-overlapped').checked;
+      const todaySlash = Utils.getTodaySlash();
+
+      // 日付配列を生成
+      const dateColumns = [];
+      for (let i = 0; i < daysCount; i++) {
+        const dSlash = Utils.addDaysSlash(startDate, i);
+        dateColumns.push(Utils.getDayInfo(dSlash));
+      }
+
+      // 対象タスク抽出
+      const baseTasks = state.tasks.filter(t => {
+        if (!showCompleted && t.status === '完了') return false;
+        if (assigneeFilter && (t.assignee || '') !== assigneeFilter) return false;
+        return true;
+      });
+
+      // 日別の重複計算マップを作成
+      // dateSlash -> { allActiveTasks: [], assigneeMap: Map<assigneeName, Task[]> }
+      const dayOverlapStats = new Map();
+      dateColumns.forEach(dc => {
+        const activeOnDay = baseTasks.filter(t => MeetingGenerator.isTaskActiveOnDate(t, dc.slash));
+        const byAssignee = new Map();
+        activeOnDay.forEach(t => {
+          const key = (t.assignee && t.assignee.trim()) ? t.assignee.trim() : '（担当者未定）';
+          if (!byAssignee.has(key)) byAssignee.set(key, []);
+          byAssignee.get(key).push(t);
+        });
+        dayOverlapStats.set(dc.slash, {
+          allActiveTasks: activeOnDay,
+          byAssignee
+        });
+      });
+
+      // あるタスクがある日に他のタスクと重複しているか判定する関数
+      const getOverlappingTasksOnDay = (task, dateSlash) => {
+        const stat = dayOverlapStats.get(dateSlash);
+        if (!stat) return [];
+        if (overlapMode === 'assignee') {
+          const key = (task.assignee && task.assignee.trim()) ? task.assignee.trim() : '（担当者未定）';
+          const list = stat.byAssignee.get(key) || [];
+          return list.filter(other => other.id !== task.id);
+        } else {
+          return stat.allActiveTasks.filter(other => other.id !== task.id);
+        }
+      };
+
+      // タスクごとの表示期間内最大重複数を計算
+      const taskOverlapInfoMap = new Map();
+      let totalOverlappedTasksCount = 0;
+
+      baseTasks.forEach(t => {
+        const overlappingTaskIds = new Set();
+        const overlappingDates = [];
+
+        dateColumns.forEach(dc => {
+          if (MeetingGenerator.isTaskActiveOnDate(t, dc.slash)) {
+            const others = getOverlappingTasksOnDay(t, dc.slash);
+            if (others.length > 0) {
+              overlappingDates.push(dc.slash);
+              others.forEach(o => overlappingTaskIds.add(o.id));
+            }
+          }
+        });
+
+        const hasOverlap = overlappingTaskIds.size > 0;
+        if (hasOverlap) totalOverlappedTasksCount++;
+
+        taskOverlapInfoMap.set(t.id, {
+          hasOverlap,
+          overlapPartnerCount: overlappingTaskIds.size,
+          overlappingDates
+        });
+      });
+
+      // 日別で重複が発生している日数カウント
+      let overlapDaysCount = 0;
+      const overlapDetailsSummary = [];
+      dateColumns.forEach(dc => {
+        const stat = dayOverlapStats.get(dc.slash);
+        if (overlapMode === 'assignee') {
+          let dayHasAssigneeConflict = false;
+          stat.byAssignee.forEach((list, assignee) => {
+            if (list.length >= 2) {
+              dayHasAssigneeConflict = true;
+              overlapDetailsSummary.push(`${dc.monthDay} ${assignee}(${list.length}件)`);
+            }
+          });
+          if (dayHasAssigneeConflict) overlapDaysCount++;
+        } else {
+          if (stat.allActiveTasks.length >= 2) {
+            overlapDaysCount++;
+            overlapDetailsSummary.push(`${dc.monthDay}(${stat.allActiveTasks.length}件)`);
+          }
+        }
+      });
+
+      // サマリーカードの描画
+      const summaryContainer = document.getElementById('wbs-summary-cards');
+      summaryContainer.innerHTML = `
+        <div class="wbs-stat-card">
+          <span class="wbs-stat-label">表示期間内の対象タスク数</span>
+          <span class="wbs-stat-value">${baseTasks.length} 件</span>
+        </div>
+        <div class="wbs-stat-card ${totalOverlappedTasksCount > 0 ? 'alert' : ''}">
+          <span class="wbs-stat-label">⚠️ 作業が重複しているタスク数</span>
+          <span class="wbs-stat-value" style="color:${totalOverlappedTasksCount > 0 ? 'var(--danger)' : 'var(--success)'};">
+            ${totalOverlappedTasksCount} 件
+          </span>
+        </div>
+        <div class="wbs-stat-card ${overlapDaysCount > 0 ? 'warn' : ''}">
+          <span class="wbs-stat-label">📅 重複発生日数（${daysCount}日間中）</span>
+          <span class="wbs-stat-value" style="color:${overlapDaysCount > 0 ? 'var(--warning)' : 'var(--text-main)'};">
+            ${overlapDaysCount} 日
+          </span>
+        </div>
+        <div class="wbs-stat-card">
+          <span class="wbs-stat-label">主な重複発生箇所（上位）</span>
+          <span style="font-size:12px; font-weight:600; color:${overlapDetailsSummary.length ? 'var(--danger)' : 'var(--text-muted)'}; margin-top:2px;">
+            ${overlapDetailsSummary.length > 0 ? Utils.escapeHtml(overlapDetailsSummary.slice(0, 4).join(' / ')) : '重複なし'}
+          </span>
+        </div>
+      `;
+
+      // WBSテーブル描画
+      const tableContainer = document.getElementById('wbs-table-container');
+      if (state.projects.length === 0 || baseTasks.length === 0) {
+        tableContainer.innerHTML = `<div class="empty-state">表示対象のタスクがありません。「5. 設定・データ管理 ＞ サンプルデータを投入する」または「＋ タスク登録」から追加してください。</div>`;
+        return;
+      }
+
+      let theadHtml = `
+        <thead>
+          <tr>
+            <th class="wbs-col-task">案件 / 作業内容（クリックで編集）</th>
+            <th class="wbs-col-meta">担当者</th>
+            <th class="wbs-col-meta">状態</th>
+            <th class="wbs-col-meta">期間 (開始〜終了)</th>
+            ${dateColumns.map(dc => {
+              const isToday = dc.slash === todaySlash;
+              const dowClass = dc.dow === 0 ? 'is-sun' : (dc.dow === 6 ? 'is-sat' : '');
+              return `
+                <th class="wbs-day-col ${isToday ? 'is-today' : ''} ${dowClass}" title="${dc.slash}">
+                  <div>${dc.monthDay}</div>
+                  <div style="font-size:10px;">(${dc.weekday})</div>
+                </th>
+              `;
+            }).join('')}
+          </tr>
+          <!-- 日別負荷・重複サマリー行 -->
+          <tr class="wbs-load-row">
+            <td class="wbs-col-task" style="text-align:left; background:#f8fafc;">
+              📊 日別タスク件数 / 重複チェック
+            </td>
+            <td colspan="3" style="font-size:11px; color:var(--text-muted);">
+              ${overlapMode === 'assignee' ? '同一担当重複で⚠️' : '2件以上並行で⚠️'}
+            </td>
+            ${dateColumns.map(dc => {
+              const stat = dayOverlapStats.get(dc.slash);
+              const totalCnt = stat.allActiveTasks.length;
+              let hasConflict = false;
+              let conflictTooltip = [];
+
+              if (overlapMode === 'assignee') {
+                stat.byAssignee.forEach((list, assignee) => {
+                  if (list.length >= 2) {
+                    hasConflict = true;
+                    conflictTooltip.push(`${assignee}: ${list.map(x => x.title).join(', ')}`);
+                  }
+                });
+              } else {
+                if (totalCnt >= 2) {
+                  hasConflict = true;
+                  conflictTooltip.push(stat.allActiveTasks.map(x => `${x.title}(${x.assignee || '未定'})`).join(', '));
+                }
+              }
+
+              const cellClass = hasConflict ? 'wbs-load-cell-overlap' : (totalCnt >= 2 ? 'wbs-load-cell-multi' : '');
+              const titleAttr = conflictTooltip.length > 0 ? `重複: ${conflictTooltip.join(' / ')}` : `${dc.slash}: ${totalCnt}件`;
+              return `
+                <td class="wbs-day-col ${cellClass}" title="${Utils.escapeHtml(titleAttr)}">
+                  ${totalCnt === 0 ? '<span style="color:#cbd5e1;">-</span>' : (hasConflict ? `⚠️${totalCnt}` : `${totalCnt}`)}
+                </td>
+              `;
+            }).join('')}
+          </tr>
+        </thead>
+      `;
+
+      let tbodyHtml = '<tbody>';
+      let renderedRowCount = 0;
+
+      state.projects.forEach(proj => {
+        let pTasks = baseTasks.filter(t => t.projectId === proj.id);
+        if (onlyOverlapped) {
+          pTasks = pTasks.filter(t => taskOverlapInfoMap.get(t.id)?.hasOverlap);
+        }
+        if (pTasks.length === 0) return;
+
+        // 開始日順にソート
+        pTasks.sort((a, b) => {
+          const sa = MeetingGenerator.getTaskDateSpan(a).start || '9999/99/99';
+          const sb = MeetingGenerator.getTaskDateSpan(b).start || '9999/99/99';
+          return sa.localeCompare(sb);
+        });
+
+        tbodyHtml += `
+          <tr class="wbs-project-row">
+            <td class="wbs-col-task">
+              📁 ${Utils.escapeHtml(proj.name)} (${pTasks.length}件)
+            </td>
+            <td colspan="${3 + dateColumns.length}">
+              <button type="button" class="btn btn-sm" data-quick-add-for-project="${Utils.escapeHtml(proj.id)}">＋ この案件にタスク追加</button>
+            </td>
+          </tr>
+        `;
+
+        pTasks.forEach(t => {
+          renderedRowCount++;
+          const span = MeetingGenerator.getTaskDateSpan(t);
+          const overlapInfo = taskOverlapInfoMap.get(t.id);
+          const spanLabel = span.start
+            ? (span.start === span.end ? span.start.slice(5) : `${span.start.slice(5)}〜${span.end.slice(5)}`)
+            : '未定';
+
+          tbodyHtml += `
+            <tr class="wbs-task-row ${overlapInfo?.hasOverlap ? 'has-overlap' : ''}">
+              <td class="wbs-col-task">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
+                  <span style="font-weight:600; cursor:pointer; color:var(--primary);" data-edit-task="${Utils.escapeHtml(t.id)}" title="クリックしてタスクを編集">
+                    ・${Utils.escapeHtml(t.title)}
+                  </span>
+                  ${overlapInfo?.hasOverlap
+                    ? `<span class="overlap-badge" title="他${overlapInfo.overlapPartnerCount}件のタスクと同日重複しています">⚠️他${overlapInfo.overlapPartnerCount}件と重複</span>`
+                    : ''}
+                </div>
+                ${t.description && t.description !== t.title
+                  ? `<div style="font-size:11px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${Utils.escapeHtml(t.description)}">${Utils.escapeHtml(t.description)}</div>`
+                  : ''}
+              </td>
+              <td class="wbs-col-meta" style="font-weight:600;">
+                ${Utils.escapeHtml(t.assignee || '未定')}
+              </td>
+              <td class="wbs-col-meta">
+                <span class="badge status-${Utils.escapeHtml(t.status)}">${Utils.escapeHtml(t.status)}</span>
+              </td>
+              <td class="wbs-col-meta" style="font-family:var(--font-mono); font-size:11px;">
+                ${Utils.escapeHtml(spanLabel)}
+              </td>
+              ${dateColumns.map(dc => {
+                const isToday = dc.slash === todaySlash;
+                const dowClass = dc.dow === 0 ? 'is-sun' : (dc.dow === 6 ? 'is-sat' : '');
+                const isActive = MeetingGenerator.isTaskActiveOnDate(t, dc.slash);
+
+                if (!isActive) {
+                  return `<td class="wbs-day-col ${isToday ? 'is-today' : ''} ${dowClass}"></td>`;
+                }
+
+                const othersOnDay = getOverlappingTasksOnDay(t, dc.slash);
+                const isCellOverlapped = othersOnDay.length > 0;
+
+                // セル内マーカー（予・実・完・●）
+                const markers = [];
+                if (t.scheduledDate === dc.slash) markers.push('予');
+                if (t.performedDate === dc.slash) markers.push('実');
+                if (t.completedDate === dc.slash && t.status === '完了') markers.push('完');
+                const markerText = markers.length > 0 ? markers.join('') : '●';
+
+                const tooltipParts = [
+                  `${dc.slash}: ${t.title} (${t.assignee || '担当者未定'} / ${t.status})`
+                ];
+                if (isCellOverlapped) {
+                  tooltipParts.push(`⚠️同日重複: ${othersOnDay.map(o => `${o.title}[${o.assignee || '未定'}]`).join(', ')}`);
+                }
+
+                return `
+                  <td class="wbs-day-col ${isToday ? 'is-today' : ''} ${dowClass} ${isCellOverlapped ? 'cell-overlap-bg' : ''}">
+                    <div class="wbs-bar-wrap wbs-bar-${Utils.escapeHtml(t.status)} ${isCellOverlapped ? 'is-overlapped' : ''}"
+                         data-edit-task="${Utils.escapeHtml(t.id)}"
+                         title="${Utils.escapeHtml(tooltipParts.join('\n'))}">
+                      ${isCellOverlapped ? '⚠️' : ''}${Utils.escapeHtml(markerText)}
+                    </div>
+                  </td>
+                `;
+              }).join('')}
+            </tr>
+          `;
+        });
+      });
+
+      tbodyHtml += '</tbody>';
+
+      if (renderedRowCount === 0) {
+        tableContainer.innerHTML = `<div class="empty-state">条件に一致するタスク（または重複タスク）はありません。</div>`;
+      } else {
+        tableContainer.innerHTML = `<table class="wbs-table">${theadHtml}${tbodyHtml}</table>`;
+      }
+    }
+
+    /**
+     * ============================================================================
+     * VIEW 4: 履歴検索画面
+     * ============================================================================
+     */
+    function executeSearch() {
+      const exactDate = Utils.hyphenToSlash(document.getElementById('search-date-exact').value);
+      const fromDate = Utils.hyphenToSlash(document.getElementById('search-date-from').value);
+      const toDate = Utils.hyphenToSlash(document.getElementById('search-date-to').value);
+      const projKw = document.getElementById('search-project').value.trim().toLowerCase();
+      const assigneeKw = document.getElementById('search-assignee').value.trim().toLowerCase();
+      const taskTitleKw = document.getElementById('search-task-title').value.trim().toLowerCase();
+      const statusFilter = document.getElementById('search-status').value;
+      const targetType = document.getElementById('search-target-type').value;
+      const freeKw = document.getElementById('search-keyword').value.trim().toLowerCase();
+
+      const results = [];
+
+      const matchDateRange = (dStr) => {
+        if (!dStr) return !exactDate && !fromDate && !toDate;
+        if (exactDate && dStr !== exactDate) return false;
+        if (fromDate && dStr < fromDate) return false;
+        if (toDate && dStr > toDate) return false;
+        return true;
+      };
+
+      if ((targetType === 'all' || targetType === 'meetings') && !statusFilter && !assigneeKw && !taskTitleKw) {
+        state.dailyMeetings.forEach(m => {
+          if (!matchDateRange(m.date)) return;
+          const textBody = m.editedText || m.generatedText || '';
+          if (projKw && !textBody.toLowerCase().includes(projKw)) return;
+          if (freeKw && !textBody.toLowerCase().includes(freeKw)) return;
+
+          results.push({
+            category: 'meeting',
+            sortDate: m.date,
+            title: `${m.date} の保存済み朝会テキスト`,
+            subtitle: `更新日時: ${m.updatedAt || '-'}`,
+            body: textBody,
+            rawItem: m
+          });
+        });
+      }
+
+      if (targetType === 'all' || targetType === 'tasks') {
+        state.tasks.forEach(t => {
+          const proj = state.projects.find(p => p.id === t.projectId);
+          const pName = proj ? proj.name : '';
+
+          const taskDates = [t.performedDate, t.scheduledDate, t.completedDate, t.createdDate].filter(Boolean);
+          const primaryDate = MeetingGenerator.getTaskDisplayDate(t);
+
+          if (exactDate || fromDate || toDate) {
+            const anyMatch = taskDates.some(d => matchDateRange(d));
+            if (!anyMatch) return;
+          }
+
+          if (projKw && !pName.toLowerCase().includes(projKw)) return;
+          if (assigneeKw && !(t.assignee || '').toLowerCase().includes(assigneeKw)) return;
+          if (taskTitleKw && !`${t.title} ${t.description || ''}`.toLowerCase().includes(taskTitleKw)) return;
+          if (statusFilter && t.status !== statusFilter) return;
+          if (freeKw) {
+            const hay = `${pName} ${t.title} ${t.description || ''} ${t.decision || ''} ${t.sourceText || ''} ${t.assignee || ''} ${t.status}`.toLowerCase();
+            if (!hay.includes(freeKw)) return;
+          }
+
+          const bodyParts = [];
+          if (t.description && t.description !== t.title) bodyParts.push(`詳細: ${t.description}`);
+          if (t.decision) bodyParts.push(`判断・対応方針: ${t.decision}`);
+          if (t.sourceText) bodyParts.push(`--- 元文章 ---\n${t.sourceText}`);
+
+          results.push({
+            category: 'task',
+            sortDate: primaryDate === '日付未定' ? (t.createdDate || '0000/00/00') : primaryDate,
+            title: `[${pName || '案件なし'}] ${t.title}`,
+            status: t.status,
+            subtitle: `担当者: ${t.assignee || '未定'} ／ 登録:${t.createdDate || '-'} 予定:${t.scheduledDate || '-'} 実施:${t.performedDate || '-'} 完了:${t.completedDate || '-'}`,
+            body: bodyParts.join('\n'),
+            rawItem: t
+          });
+        });
+      }
+
+      if ((targetType === 'all' || targetType === 'sources') && !statusFilter && !assigneeKw && !taskTitleKw) {
+        const checkHeader = MeetingGenerator.getCheckSectionHeader();
+
+        state.sources.forEach(s => {
+          if (s.type !== 'checkSection' && s.type !== 'check') return;
+          if (!matchDateRange(s.date)) return;
+          const proj = state.projects.find(p => p.id === s.projectId);
+          const pName = proj ? proj.name : '';
+
+          if (projKw && !pName.toLowerCase().includes(projKw)) return;
+          if (freeKw) {
+            const hay = `${pName} ${s.subject} ${s.content || ''} ${s.decision || ''} ${s.sourceText || ''}`.toLowerCase();
+            if (!hay.includes(freeKw)) return;
+          }
+
+          results.push({
+            category: 'source',
+            sortDate: s.date,
+            sourceBadge: `確認セクション: ${checkHeader}`,
+            title: `${s.subject} ${pName ? `[${pName}]` : ''}`,
+            subtitle: `日付: ${s.date}`,
+            body: [
+              s.content ? `内容: ${s.content}` : '',
+              s.decision ? `判断・対応方針: ${s.decision}` : '',
+              s.sourceText ? `--- 元文章 ---\n${s.sourceText}` : ''
+            ].filter(Boolean).join('\n'),
+            rawItem: s
+          });
+        });
+      }
+
+      results.sort((a, b) => (b.sortDate || '').localeCompare(a.sortDate || ''));
+
+      document.getElementById('search-result-count').textContent = `${results.length}件`;
+      const container = document.getElementById('search-results-container');
+
+      if (results.length === 0) {
+        container.innerHTML = `<div class="empty-state">該当する履歴データが存在しません。</div>`;
+        return;
+      }
+
+      container.innerHTML = results.map((r, idx) => {
+        if (r.category === 'meeting') {
+          return `
+            <div style="border:1px solid var(--border-color); border-radius:var(--radius); padding:12px; margin-bottom:10px; background:#fff;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <div>
+                  <span class="badge" style="background:#1e40af; color:#fff;">朝会テキスト</span>
+                  <strong style="margin-left:6px;">${Utils.escapeHtml(r.title)}</strong>
+                  <span style="font-size:12px; color:var(--text-muted); margin-left:8px;">${Utils.escapeHtml(r.subtitle)}</span>
+                </div>
+                <div style="display:flex; gap:6px;">
+                  <button type="button" class="btn btn-sm" data-open-meeting-date="${Utils.escapeHtml(r.rawItem.date)}">この日の朝会画面を開く</button>
+                  <button type="button" class="btn btn-sm btn-accent" data-view-meeting-text="${idx}">全文表示・コピー</button>
+                </div>
+              </div>
+              <pre style="font-family:var(--font-mono); font-size:12px; background:#f8fafc; padding:8px; border-radius:4px; max-height:120px; overflow:auto; white-space:pre-wrap;">${Utils.escapeHtml(r.body)}</pre>
+            </div>
+          `;
+        } else if (r.category === 'task') {
+          return `
+            <div style="border:1px solid var(--border-color); border-radius:var(--radius); padding:10px 12px; margin-bottom:8px; background:#fff; display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+              <div style="flex:1;">
+                <span class="badge status-${Utils.escapeHtml(r.status)}">タスク: ${Utils.escapeHtml(r.status)}</span>
+                <strong style="margin-left:6px;">${Utils.escapeHtml(r.title)}</strong>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:3px; font-family:var(--font-mono);">${Utils.escapeHtml(r.subtitle)}</div>
+                ${r.body ? `<div style="font-size:12px; color:var(--text-main); margin-top:4px; white-space:pre-wrap;">${Utils.escapeHtml(r.body)}</div>` : ''}
+              </div>
+              <button type="button" class="btn btn-sm" data-edit-task="${Utils.escapeHtml(r.rawItem.id)}">詳細・編集</button>
+            </div>
+          `;
+        } else {
+          return `
+            <div style="border:1px solid var(--border-color); border-radius:var(--radius); padding:10px 12px; margin-bottom:8px; background:#fff;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <span class="badge type-badge type-check">${Utils.escapeHtml(r.sourceBadge)}</span>
+                  <strong style="margin-left:6px;">${Utils.escapeHtml(r.title)}</strong>
+                  <span style="font-size:12px; color:var(--text-muted); margin-left:8px;">${Utils.escapeHtml(r.subtitle)}</span>
+                </div>
+                <button type="button" class="btn btn-sm" data-edit-source="${Utils.escapeHtml(r.rawItem.id)}">詳細・編集</button>
+              </div>
+              ${r.body ? `<div style="font-size:12px; color:var(--text-muted); margin-top:4px; white-space:pre-wrap;">${Utils.escapeHtml(r.body)}</div>` : ''}
+            </div>
+          `;
+        }
+      }).join('');
+
+      container.querySelectorAll('[data-view-meeting-text]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const r = results[Number(btn.getAttribute('data-view-meeting-text'))];
+          if (r) openTextViewerModal(r.title, r.body);
+        });
+      });
+    }
+
+    /**
+     * ============================================================================
+     * VIEW 5: 設定・データ管理
+     * ============================================================================
+     */
+    function renderSettingsView() {
+      const tpl = MeetingGenerator.getNormalizedTemplate(state.templateSettings);
+      document.getElementById('tpl-project-border').value = tpl.projectBorder;
+      document.getElementById('tpl-check-section').value = tpl.checkSection || '';
+      document.getElementById('tpl-omit-empty').checked = Boolean(tpl.omitEmptySections);
+    }
+
+    function validateBackupJson(data) {
+      if (!data || typeof data !== 'object') {
+        throw new Error('JSONデータのルートがオブジェクトではありません。');
+      }
+      const requiredArrays = ['projects', 'tasks', 'dailyMeetings', 'sources'];
+      for (const key of requiredArrays) {
+        if (!Array.isArray(data[key])) {
+          throw new Error(`必須データ配列「${key}」が含まれていないか、形式が不正です。`);
+        }
+      }
+      for (const p of data.projects) {
+        if (!p.id || !p.name) throw new Error('案件データ(projects)にidまたはnameが欠落しているレコードがあります。');
+      }
+      for (const t of data.tasks) {
+        if (!t.id || !t.projectId || !t.title) throw new Error('タスクデータ(tasks)に必須項目(id/projectId/title)が欠落しています。');
+      }
+      for (const m of data.dailyMeetings) {
+        if (!m.date) throw new Error('朝会データ(dailyMeetings)にdateが欠落しています。');
+      }
+      for (const s of data.sources) {
+        if (!s.id || !s.date || !s.type) throw new Error('情報源データ(sources)に必須項目(id/date/type)が欠落しています。');
+      }
+      return true;
+    }
+
+    /**
+     * ============================================================================
+     * イベントリスナーのバインド
+     * ============================================================================
+     */
+    function bindAllEvents() {
+      document.querySelectorAll('[data-close-modal]').forEach(btn => {
+        btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close-modal')));
+      });
+
+      // 日付変更（朝会作成）
+      document.getElementById('meeting-date-input').addEventListener('change', (e) => {
+        if (!e.target.value) return;
+        state.currentDate = Utils.hyphenToSlash(e.target.value);
+        document.getElementById('carryover-result').style.display = 'none';
+        document.getElementById('meeting-preview-textarea').dataset.manualEdited = 'false';
+        renderMeetingView(true);
+      });
+
+      document.getElementById('btn-prev-day').addEventListener('click', () => {
+        state.currentDate = Utils.addDaysSlash(state.currentDate, -1);
+        document.getElementById('carryover-result').style.display = 'none';
+        document.getElementById('meeting-preview-textarea').dataset.manualEdited = 'false';
+        renderMeetingView(true);
+      });
+
+      document.getElementById('btn-next-day').addEventListener('click', () => {
+        state.currentDate = Utils.addDaysSlash(state.currentDate, 1);
+        document.getElementById('carryover-result').style.display = 'none';
+        document.getElementById('meeting-preview-textarea').dataset.manualEdited = 'false';
+        renderMeetingView(true);
+      });
+
+      document.getElementById('btn-today').addEventListener('click', () => {
+        state.currentDate = Utils.getTodaySlash();
+        document.getElementById('carryover-result').style.display = 'none';
+        document.getElementById('meeting-preview-textarea').dataset.manualEdited = 'false';
+        renderMeetingView(true);
+      });
+
+      document.getElementById('chk-show-completed-today').addEventListener('change', () => {
+        renderMeetingView(true);
+      });
+
+      // WBS操作イベント
+      document.getElementById('wbs-start-date').addEventListener('change', (e) => {
+        if (!e.target.value) return;
+        state.wbsStartDate = Utils.hyphenToSlash(e.target.value);
+        renderWbsView();
+      });
+      document.getElementById('btn-wbs-prev-week').addEventListener('click', () => {
+        state.wbsStartDate = Utils.addDaysSlash(state.wbsStartDate, -7);
+        renderWbsView();
+      });
+      document.getElementById('btn-wbs-next-week').addEventListener('click', () => {
+        state.wbsStartDate = Utils.addDaysSlash(state.wbsStartDate, 7);
+        renderWbsView();
+      });
+      document.getElementById('btn-wbs-today').addEventListener('click', () => {
+        state.wbsStartDate = Utils.addDaysSlash(Utils.getTodaySlash(), -3);
+        renderWbsView();
+      });
+      ['wbs-days-select', 'wbs-filter-assignee', 'wbs-overlap-mode', 'wbs-show-completed', 'wbs-only-overlapped'].forEach(id => {
+        document.getElementById(id).addEventListener('change', renderWbsView);
+      });
+      document.getElementById('btn-wbs-add-task').addEventListener('click', () => {
+        openTaskModal(null, null, state.currentDate);
+      });
+
+      // 前日引き継ぎボタン
+      document.getElementById('btn-carryover').addEventListener('click', async () => {
+        try {
+          await executeCarryOver();
+        } catch (err) {
+          Utils.notify(err.message, 'error');
+        }
+      });
+
+      // プレビュー直接編集の検知
+      const previewTa = document.getElementById('meeting-preview-textarea');
+      previewTa.addEventListener('input', () => {
+        previewTa.dataset.manualEdited = 'true';
+        previewTa.classList.add('is-edited');
+        const bannerEl = document.getElementById('preview-mode-banner');
+        const bannerText = document.getElementById('preview-mode-text');
+        bannerEl.className = 'edit-state-banner manual';
+        bannerText.textContent = '直接編集モード（手動編集された内容が保持されています。タスク構造データは変更されません）';
+      });
+
+      document.getElementById('btn-regenerate-preview').addEventListener('click', () => {
+        if (previewTa.dataset.manualEdited === 'true') {
+          if (!confirm('プレビューへの直接編集内容を破棄し、現在のタスク・確認事項から再生成しますか？')) return;
+        }
+        previewTa.dataset.manualEdited = 'false';
+        updatePreviewArea(false);
+        Utils.notify('構造化データから朝会テキストを再生成しました。', 'info');
+      });
+
+      // 朝会テキストの保存
+      document.getElementById('btn-save-meeting').addEventListener('click', async () => {
+        if (state.isSaving) return;
+        const targetDate = state.currentDate;
+        const existing = state.dailyMeetings.find(m => m.date === targetDate);
+        if (existing && (existing.generatedText || existing.editedText)) {
+          if (!confirm(`${targetDate} の朝会データは既に保存されています。上書き保存しますか？`)) return;
+        }
+
+        state.isSaving = true;
+        try {
+          const generatedText = MeetingGenerator.generateText(targetDate);
+          const editedText = document.getElementById('meeting-preview-textarea').value;
+          const activeTasks = MeetingGenerator.getTasksForDate(targetDate, true);
+          const taskIds = Array.from(new Set([
+            ...(existing?.taskIds || []),
+            ...activeTasks.map(t => t.id)
+          ]));
+
+          const nowTs = Utils.getLocalTimestamp();
+          await db.put('dailyMeetings', {
+            date: targetDate,
+            taskIds,
+            generatedText,
+            editedText,
+            createdAt: existing?.createdAt || nowTs,
+            updatedAt: nowTs
+          });
+
+          await reloadAllDataFromDB();
+          renderMeetingView(true);
+          Utils.notify(`${targetDate} の朝会テキストをデータベースに保存しました。`, 'success');
+        } catch (err) {
+          Utils.notify('朝会テキストの保存に失敗しました: ' + err.message, 'error');
+        } finally {
+          state.isSaving = false;
+        }
+      });
+
+      // コピーボタン
+      document.getElementById('btn-copy-meeting').addEventListener('click', () => {
+        const text = document.getElementById('meeting-preview-textarea').value;
+        Utils.copyToClipboard(text);
+      });
+
+      document.getElementById('btn-modal-copy-text').addEventListener('click', () => {
+        const text = document.getElementById('modal-text-viewer-textarea').value;
+        Utils.copyToClipboard(text);
+      });
+
+      // 案件追加モーダル起動
+      document.getElementById('btn-new-project').addEventListener('click', () => {
+        openProjectModal();
+      });
+      document.getElementById('btn-new-project-quick').addEventListener('click', () => {
+        openProjectModal();
+      });
+
+      // 案件保存
+      document.getElementById('form-project').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (state.isSaving) return;
+        const idInput = document.getElementById('project-id-input').value;
+        const name = document.getElementById('project-name-input').value.trim();
+        const description = document.getElementById('project-desc-input').value.trim();
+        if (!name) return;
+
+        state.isSaving = true;
+        try {
+          const nowTs = Utils.getLocalTimestamp();
+          const existing = state.projects.find(p => p.id === idInput);
+          const record = {
+            id: existing ? existing.id : Utils.generateId('proj'),
+            name,
+            description,
+            createdAt: existing ? existing.createdAt : nowTs,
+            updatedAt: nowTs
+          };
+          await db.put('projects', record);
+          await reloadAllDataFromDB();
+          closeModal('modal-project');
+          renderProjectsAndTasksView();
+          renderMeetingView(true);
+          renderWbsView();
+          Utils.notify(`案件「${name}」を保存しました。`, 'success');
+        } catch (err) {
+          Utils.notify(err.message, 'error');
+        } finally {
+          state.isSaving = false;
+        }
+      });
+
+      // タスク追加ボタン
+      document.getElementById('btn-quick-add-task').addEventListener('click', () => {
+        openTaskModal(null, null, state.currentDate);
+      });
+      document.getElementById('btn-quick-add-task-top').addEventListener('click', () => {
+        openTaskModal(null, null, state.currentDate);
+      });
+      document.getElementById('btn-new-task-from-mgmt').addEventListener('click', () => {
+        openTaskModal(null, state.selectedMgmtProjectId, state.currentDate);
+      });
+
+      // タスクモーダル内の元文章からの転記ボタン
+      document.getElementById('btn-extract-task-from-raw').addEventListener('click', () => {
+        const raw = document.getElementById('task-raw-input').value.trim();
+        if (!raw) {
+          Utils.notify('元文章欄にテキストを貼り付けてください。', 'warning');
+          return;
+        }
+        const lines = raw.split(/\r?\n/);
+        const firstLine = lines[0].replace(/^(件名[:：]\s*|Subject[:：]\s*)/i, '').trim();
+        const rest = lines.slice(1).join('\n').trim();
+        if (!document.getElementById('task-title-input').value) {
+          document.getElementById('task-title-input').value = firstLine;
+        }
+        if (rest && !document.getElementById('task-desc-input').value) {
+          document.getElementById('task-desc-input').value = rest;
+        }
+        Utils.notify('元文章から「作業内容」と「詳細作業内容」へ転記しました。', 'info');
+      });
+
+      // タスク状態変更時の完了日自動セット/クリア連動
+      document.getElementById('task-status-select').addEventListener('change', (e) => {
+        const newStatus = e.target.value;
+        const compInput = document.getElementById('task-completed-date');
+        const perfInput = document.getElementById('task-performed-date');
+        if (newStatus === '完了') {
+          if (!compInput.value) compInput.value = Utils.slashToHyphen(state.currentDate);
+          if (!perfInput.value) perfInput.value = Utils.slashToHyphen(state.currentDate);
+        } else {
+          compInput.value = '';
+        }
+      });
+
+      // タスク保存
+      document.getElementById('form-task').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (state.isSaving) return;
+
+        const idInput = document.getElementById('task-id-input').value;
+        const projectId = document.getElementById('task-project-select').value;
+        const status = document.getElementById('task-status-select').value;
+        const title = document.getElementById('task-title-input').value.trim();
+        const description = document.getElementById('task-desc-input').value.trim() || title;
+        const decision = document.getElementById('task-decision-input').value.trim();
+        const sourceText = document.getElementById('task-raw-input').value;
+        const assignee = document.getElementById('task-assignee-input').value.trim();
+        const createdDate = Utils.hyphenToSlash(document.getElementById('task-created-date').value);
+        const scheduledDate = Utils.hyphenToSlash(document.getElementById('task-scheduled-date').value);
+        const performedDate = Utils.hyphenToSlash(document.getElementById('task-performed-date').value);
+        let completedDate = Utils.hyphenToSlash(document.getElementById('task-completed-date').value);
+
+        if (status === '完了' && !completedDate) {
+          completedDate = state.currentDate;
+        } else if (status !== '完了') {
+          completedDate = '';
+        }
+
+        state.isSaving = true;
+        try {
+          const nowTs = Utils.getLocalTimestamp();
+          const existing = state.tasks.find(t => t.id === idInput);
+          const taskId = existing ? existing.id : Utils.generateId('task');
+          const record = {
+            id: taskId,
+            projectId,
+            title,
+            description,
+            decision,
+            sourceText,
+            assignee,
+            status,
+            createdDate: createdDate || (existing ? existing.createdDate : state.currentDate),
+            scheduledDate,
+            performedDate,
+            completedDate,
+            createdAt: existing ? existing.createdAt : nowTs,
+            updatedAt: nowTs
+          };
+
+          await db.put('tasks', record);
+
+          let todayMeeting = state.dailyMeetings.find(m => m.date === state.currentDate);
+          if (todayMeeting) {
+            const setIds = new Set(todayMeeting.taskIds || []);
+            setIds.add(taskId);
+            todayMeeting.taskIds = Array.from(setIds);
+            todayMeeting.updatedAt = nowTs;
+            await db.put('dailyMeetings', todayMeeting);
+          }
+
+          await reloadAllDataFromDB();
+          closeModal('modal-task');
+          renderMeetingView(true);
+          renderProjectsAndTasksView();
+          renderWbsView();
+          Utils.notify(`タスク「${title}」を保存しました。`, 'success');
+        } catch (err) {
+          Utils.notify(err.message, 'error');
+        } finally {
+          state.isSaving = false;
+        }
+      });
+
+      // 既存タスクを当日リストに追加モーダル
+      document.getElementById('btn-pick-existing-task').addEventListener('click', () => {
+        renderPickExistingTaskModal();
+        openModal('modal-pick-task');
+      });
+
+      // 別出し：確認事項を追加ボタン
+      document.getElementById('btn-add-check-source').addEventListener('click', () => {
+        openSourceModal(null, state.currentDate);
+      });
+
+      document.getElementById('btn-extract-from-raw').addEventListener('click', () => {
+        const raw = document.getElementById('source-raw-input').value.trim();
+        if (!raw) {
+          Utils.notify('元文章欄にテキストを貼り付けてください。', 'warning');
+          return;
+        }
+        const lines = raw.split(/\r?\n/);
+        const firstLine = lines[0].replace(/^(件名[:：]\s*|Subject[:：]\s*)/i, '').trim();
+        const rest = lines.slice(1).join('\n').trim();
+        if (!document.getElementById('source-subject-input').value) {
+          document.getElementById('source-subject-input').value = firstLine;
+        }
+        if (rest && !document.getElementById('source-content-input').value) {
+          document.getElementById('source-content-input').value = rest;
+        }
+        Utils.notify('元文章から確認項目と内容へ転記しました。', 'info');
+      });
+
+      document.getElementById('form-source').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (state.isSaving) return;
+
+        const idInput = document.getElementById('source-id-input').value;
+        const date = Utils.hyphenToSlash(document.getElementById('source-date-input').value);
+        const projectId = document.getElementById('source-project-select').value;
+        const subject = document.getElementById('source-subject-input').value.trim();
+        const content = document.getElementById('source-content-input').value.trim();
+        const decision = document.getElementById('source-decision-input').value.trim();
+        const sourceText = document.getElementById('source-raw-input').value;
+
+        if (!subject || !date) return;
+
+        state.isSaving = true;
+        try {
+          const nowTs = Utils.getLocalTimestamp();
+          const existing = state.sources.find(s => s.id === idInput);
+          const record = {
+            id: existing ? existing.id : Utils.generateId('src'),
+            date,
+            type: 'checkSection',
+            projectId,
+            subject,
+            content,
+            decision,
+            sourceText,
+            createdAt: existing ? existing.createdAt : nowTs,
+            updatedAt: nowTs
+          };
+          await db.put('sources', record);
+          await reloadAllDataFromDB();
+          closeModal('modal-source');
+          renderMeetingView(true);
+          Utils.notify(`確認事項「${subject}」を保存しました。`, 'success');
+        } catch (err) {
+          Utils.notify(err.message, 'error');
+        } finally {
+          state.isSaving = false;
+        }
+      });
+
+      // 案件・タスク管理のフィルタ
+      document.getElementById('project-filter-input').addEventListener('input', renderProjectsAndTasksView);
+      document.getElementById('task-filter-status').addEventListener('change', renderProjectsAndTasksView);
+      document.getElementById('task-filter-keyword').addEventListener('input', renderProjectsAndTasksView);
+
+      // 検索画面イベント
+      document.getElementById('btn-exec-search').addEventListener('click', executeSearch);
+      document.getElementById('btn-clear-search').addEventListener('click', () => {
+        ['search-date-exact', 'search-date-from', 'search-date-to', 'search-project', 'search-assignee', 'search-task-title', 'search-status', 'search-keyword'].forEach(id => {
+          document.getElementById(id).value = '';
+        });
+        document.getElementById('search-target-type').value = 'all';
+        executeSearch();
+      });
+
+      // 設定画面イベント
+      document.getElementById('btn-save-settings').addEventListener('click', async () => {
+        const newSettings = {
+          projectBorder: document.getElementById('tpl-project-border').value || '##########',
+          checkSection: document.getElementById('tpl-check-section').value.trim() || '【確認事項】',
+          omitEmptySections: document.getElementById('tpl-omit-empty').checked,
+          schemaVersion: 4
+        };
+        try {
+          await db.put('settings', { key: 'templateSettings', value: newSettings });
+          await reloadAllDataFromDB();
+          renderMeetingView(true);
+          Utils.notify('テンプレート設定を保存しました。', 'success');
+        } catch (err) {
+          Utils.notify(err.message, 'error');
+        }
+      });
+
+      document.getElementById('btn-reset-settings').addEventListener('click', async () => {
+        if (!confirm('テンプレート設定を初期値に戻しますか？')) return;
+        await db.put('settings', { key: 'templateSettings', value: { ...DEFAULT_TEMPLATE_SETTINGS } });
+        await reloadAllDataFromDB();
+        renderSettingsView();
+        renderMeetingView(true);
+        Utils.notify('テンプレート設定を初期値に戻しました。', 'info');
+      });
+
+      // JSONエクスポート
+      document.getElementById('btn-export-json').addEventListener('click', async () => {
+        try {
+          const settingsList = await db.getAll('settings');
+          const backupObj = {
+            app: 'PersonalMorningMeetingOrganizer',
+            version: 1,
+            exportedAt: Utils.getLocalTimestamp(),
+            projects: state.projects,
+            tasks: state.tasks,
+            dailyMeetings: state.dailyMeetings,
+            sources: state.sources,
+            settings: settingsList
+          };
+          const blob = new Blob([JSON.stringify(backupObj, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          const dateNum = state.currentDate.replace(/\//g, '');
+          a.href = url;
+          a.download = `morning_meeting_backup_${dateNum}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          Utils.notify('JSONバックアップをエクスポートしました。', 'success');
+        } catch (err) {
+          Utils.notify('エクスポートに失敗しました: ' + err.message, 'error');
+        }
+      });
+
+      // JSONインポート（検証付き）
+      document.getElementById('btn-import-json').addEventListener('click', async () => {
+        const fileInput = document.getElementById('restore-file-input');
+        const mode = document.getElementById('restore-mode-select').value;
+        if (!fileInput.files || fileInput.files.length === 0) {
+          Utils.notify('復元するJSONファイルを選択してください。', 'warning');
+          return;
+        }
+        const file = fileInput.files[0];
+        try {
+          const text = await file.text();
+          let parsed;
+          try {
+            parsed = JSON.parse(text);
+          } catch (e) {
+            throw new Error('JSONファイルの構文が不正です。破損したファイルのため復元を中止しました。');
+          }
+
+          validateBackupJson(parsed);
+
+          const modeLabel = mode === 'overwrite' ? '既存データをすべて消去して完全置換' : '既存データに上書き統合（マージ）';
+          const confirmMsg = `バックアップファイルの検証に成功しました。\n` +
+            `・案件: ${parsed.projects.length}件\n` +
+            `・タスク: ${parsed.tasks.length}件\n` +
+            `・朝会履歴: ${parsed.dailyMeetings.length}件\n` +
+            `・確認事項: ${parsed.sources.length}件\n\n` +
+            `【${modeLabel}】で復元を実行しますか？`;
+
+          if (!confirm(confirmMsg)) return;
+
+          await db.restoreBackupData(parsed, mode);
+          await migrateLegacySectionSourcesIfNeeded();
+          await reloadAllDataFromDB();
+          renderMeetingView(false);
+          renderProjectsAndTasksView();
+          renderWbsView();
+          renderSettingsView();
+          fileInput.value = '';
+          Utils.notify('バックアップからの復元が完了しました。', 'success');
+        } catch (err) {
+          Utils.notify(err.message, 'error');
+        }
+      });
+
+      // サンプルデータの投入
+      document.getElementById('btn-load-sample-data').addEventListener('click', async () => {
+        if (!confirm('動作確認用のサンプルデータ（案件A・案件B、WBS重複確認用タスク、確認事項）を登録しますか？')) return;
+        await insertSampleData();
+      });
+
+      // 全データ初期化
+      document.getElementById('btn-clear-all-data').addEventListener('click', async () => {
+        if (!confirm('【確認 1/2】ブラウザ内のすべての案件・タスク・朝会履歴・設定を完全に削除します。よろしいですか？')) return;
+        if (!confirm('【最終確認 2/2】削除したデータは元に戻せません。本当に初期化しますか？')) return;
+        try {
+          await db.clearAllStores();
+          await reloadAllDataFromDB();
+          document.getElementById('meeting-preview-textarea').dataset.manualEdited = 'false';
+          renderMeetingView(false);
+          renderProjectsAndTasksView();
+          renderWbsView();
+          renderSettingsView();
+          Utils.notify('全データを初期化しました。', 'info');
+        } catch (err) {
+          Utils.notify(err.message, 'error');
+        }
+      });
+
+      // --- Event Delegation for Dynamic Elements ---
+      document.body.addEventListener('click', async (e) => {
+        const target = e.target.closest('button, [data-select-mgmt-project], [data-edit-task]');
+        if (!target) return;
+
+        if (target.hasAttribute('data-quick-add-for-project')) {
+          const projId = target.getAttribute('data-quick-add-for-project');
+          openTaskModal(null, projId, state.currentDate);
+          return;
+        }
+
+        if (target.hasAttribute('data-edit-task')) {
+          const taskId = target.getAttribute('data-edit-task');
+          openTaskModal(taskId);
+          return;
+        }
+
+        if (target.hasAttribute('data-remove-task-from-day')) {
+          const taskId = target.getAttribute('data-remove-task-from-day');
+          const task = state.tasks.find(t => t.id === taskId);
+          if (!task) return;
+          if (!confirm(`タスク「${task.title}」を当日（${state.currentDate}）の表示対象から除外しますか？\n（タスク履歴自体は削除されません）`)) return;
+
+          const nowTs = Utils.getLocalTimestamp();
+          if (task.scheduledDate === state.currentDate) task.scheduledDate = '';
+          if (task.performedDate === state.currentDate) task.performedDate = '';
+          task.updatedAt = nowTs;
+          await db.put('tasks', task);
+
+          const todayMeeting = state.dailyMeetings.find(m => m.date === state.currentDate);
+          if (todayMeeting && Array.isArray(todayMeeting.taskIds)) {
+            todayMeeting.taskIds = todayMeeting.taskIds.filter(id => id !== taskId);
+            todayMeeting.updatedAt = nowTs;
+            await db.put('dailyMeetings', todayMeeting);
+          }
+
+          await reloadAllDataFromDB();
+          renderMeetingView(true);
+          renderWbsView();
+          Utils.notify('当日の表示対象から除外しました。', 'info');
+          return;
+        }
+
+        if (target.hasAttribute('data-delete-task')) {
+          const taskId = target.getAttribute('data-delete-task');
+          const task = state.tasks.find(t => t.id === taskId);
+          if (!task) return;
+          if (!confirm(`タスク「${task.title}（担当: ${task.assignee || '未定'}）」を完全に削除しますか？`)) return;
+          await db.delete('tasks', taskId);
+          await reloadAllDataFromDB();
+          renderProjectsAndTasksView();
+          renderMeetingView(true);
+          renderWbsView();
+          Utils.notify('タスクを削除しました。', 'info');
+          return;
+        }
+
+        if (target.hasAttribute('data-edit-source')) {
+          const sId = target.getAttribute('data-edit-source');
+          openSourceModal(sId);
+          return;
+        }
+
+        if (target.hasAttribute('data-delete-source')) {
+          const sId = target.getAttribute('data-delete-source');
+          const src = state.sources.find(s => s.id === sId);
+          if (!src) return;
+          if (!confirm(`確認事項「${src.subject}」を削除しますか？`)) return;
+          await db.delete('sources', sId);
+          await reloadAllDataFromDB();
+          renderMeetingView(true);
+          Utils.notify('確認事項を削除しました。', 'info');
+          return;
+        }
+
+        if (target.id === 'btn-select-all-projects') {
+          state.selectedMgmtProjectId = null;
+          renderProjectsAndTasksView();
+          return;
+        }
+        if (target.hasAttribute('data-select-mgmt-project')) {
+          state.selectedMgmtProjectId = target.getAttribute('data-select-mgmt-project');
+          renderProjectsAndTasksView();
+          return;
+        }
+
+        if (target.hasAttribute('data-edit-project')) {
+          openProjectModal(target.getAttribute('data-edit-project'));
+          return;
+        }
+
+        if (target.hasAttribute('data-delete-project')) {
+          const projId = target.getAttribute('data-delete-project');
+          const proj = state.projects.find(p => p.id === projId);
+          if (!proj) return;
+          const relatedTasks = state.tasks.filter(t => t.projectId === projId);
+          if (relatedTasks.length > 0) {
+            if (!confirm(`案件「${proj.name}」には関連タスクが ${relatedTasks.length}件 存在します。\n案件と関連タスク ${relatedTasks.length}件 の履歴をすべて削除してよろしいですか？`)) return;
+            for (const rt of relatedTasks) {
+              await db.delete('tasks', rt.id);
+            }
+          } else {
+            if (!confirm(`案件「${proj.name}」を削除しますか？`)) return;
+          }
+          await db.delete('projects', projId);
+          if (state.selectedMgmtProjectId === projId) state.selectedMgmtProjectId = null;
+          await reloadAllDataFromDB();
+          renderProjectsAndTasksView();
+          renderMeetingView(true);
+          renderWbsView();
+          Utils.notify(`案件「${proj.name}」を削除しました。`, 'info');
+          return;
+        }
+
+        if (target.hasAttribute('data-pick-task-id')) {
+          const taskId = target.getAttribute('data-pick-task-id');
+          const nowTs = Utils.getLocalTimestamp();
+          let todayMeeting = state.dailyMeetings.find(m => m.date === state.currentDate);
+          const taskIds = new Set(todayMeeting?.taskIds || []);
+          taskIds.add(taskId);
+
+          await db.put('dailyMeetings', {
+            date: state.currentDate,
+            taskIds: Array.from(taskIds),
+            generatedText: todayMeeting?.generatedText || '',
+            editedText: todayMeeting?.editedText || '',
+            createdAt: todayMeeting?.createdAt || nowTs,
+            updatedAt: nowTs
+          });
+          await reloadAllDataFromDB();
+          renderPickExistingTaskModal();
+          renderMeetingView(true);
+          Utils.notify('タスクを当日の朝会対象に追加しました。', 'success');
+          return;
+        }
+
+        if (target.hasAttribute('data-open-meeting-date')) {
+          const d = target.getAttribute('data-open-meeting-date');
+          state.currentDate = d;
+          document.querySelector('[data-target="view-meeting"]').click();
+          return;
+        }
+      });
+
+      // 当日一覧でのタスク状態クイック変更
+      document.body.addEventListener('change', async (e) => {
+        const select = e.target.closest('[data-quick-status-task]');
+        if (!select) return;
+        const taskId = select.getAttribute('data-quick-status-task');
+        const newStatus = select.value;
+        const task = state.tasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        const nowTs = Utils.getLocalTimestamp();
+        task.status = newStatus;
+        if (newStatus === '完了') {
+          if (!task.completedDate) task.completedDate = state.currentDate;
+          if (!task.performedDate) task.performedDate = state.currentDate;
+        } else {
+          task.completedDate = '';
+        }
+        task.updatedAt = nowTs;
+
+        await db.put('tasks', task);
+        await reloadAllDataFromDB();
+        renderMeetingView(true);
+        renderWbsView();
+        Utils.notify(`タスク「${task.title}」の状態を「${newStatus}」に更新しました。`, 'success');
+      });
+    }
+
+    /**
+     * ============================================================================
+     * モーダル初期化関数群
+     * ============================================================================
+     */
+    function openProjectModal(projectId = null) {
+      const existing = state.projects.find(p => p.id === projectId);
+      document.getElementById('modal-project-title').textContent = existing ? '案件の編集' : '新規案件の登録';
+      document.getElementById('project-id-input').value = existing ? existing.id : '';
+      document.getElementById('project-name-input').value = existing ? existing.name : '';
+      document.getElementById('project-desc-input').value = existing ? (existing.description || '') : '';
+      openModal('modal-project');
+    }
+
+    function openTaskModal(taskId = null, defaultProjectId = null, defaultDateSlash = null) {
+      if (state.projects.length === 0) {
+        Utils.notify('先に案件を1件以上登録してください。', 'warning');
+        openProjectModal();
+        return;
+      }
+
+      const existing = state.tasks.find(t => t.id === taskId);
+      document.getElementById('modal-task-title').textContent = existing ? 'タスクの編集' : '新規タスクの登録（手入力 / テキスト貼り付け）';
+
+      const projSelect = document.getElementById('task-project-select');
+      projSelect.innerHTML = state.projects.map(p =>
+        `<option value="${Utils.escapeHtml(p.id)}">${Utils.escapeHtml(p.name)}</option>`
+      ).join('');
+
+      const baseDate = defaultDateSlash || state.currentDate;
+
+      document.getElementById('task-id-input').value = existing ? existing.id : '';
+      projSelect.value = existing ? existing.projectId : (defaultProjectId || state.projects[0].id);
+      document.getElementById('task-status-select').value = existing ? existing.status : '対応中';
+      document.getElementById('task-title-input').value = existing ? existing.title : '';
+      document.getElementById('task-desc-input').value = existing ? (existing.description || '') : '';
+      document.getElementById('task-decision-input').value = existing ? (existing.decision || '') : '';
+      document.getElementById('task-raw-input').value = existing ? (existing.sourceText || '') : '';
+      document.getElementById('task-assignee-input').value = existing ? (existing.assignee || '') : '';
+
+      document.getElementById('task-created-date').value = Utils.slashToHyphen(existing ? existing.createdDate : baseDate);
+      document.getElementById('task-scheduled-date').value = Utils.slashToHyphen(existing ? existing.scheduledDate : baseDate);
+      document.getElementById('task-performed-date').value = Utils.slashToHyphen(existing ? existing.performedDate : baseDate);
+      document.getElementById('task-completed-date').value = Utils.slashToHyphen(existing ? existing.completedDate : '');
+
+      openModal('modal-task');
+    }
+
+    function openSourceModal(sourceId = null, defaultDateSlash = null) {
+      const existing = state.sources.find(s => s.id === sourceId);
+      const checkHeader = MeetingGenerator.getCheckSectionHeader();
+      document.getElementById('modal-source-title').textContent = existing
+        ? `確認事項（${checkHeader}）の編集`
+        : `確認事項（${checkHeader}）の登録`;
+
+      const projSelect = document.getElementById('source-project-select');
+      projSelect.innerHTML = `<option value="">（案件指定なし）</option>` + state.projects.map(p =>
+        `<option value="${Utils.escapeHtml(p.id)}">${Utils.escapeHtml(p.name)}</option>`
+      ).join('');
+
+      document.getElementById('source-id-input').value = existing ? existing.id : '';
+      document.getElementById('source-date-input').value = Utils.slashToHyphen(existing ? existing.date : (defaultDateSlash || state.currentDate));
+      projSelect.value = existing ? (existing.projectId || '') : '';
+      document.getElementById('source-subject-input').value = existing ? existing.subject : '';
+      document.getElementById('source-content-input').value = existing ? (existing.content || '') : '';
+      document.getElementById('source-decision-input').value = existing ? (existing.decision || '') : '';
+      document.getElementById('source-raw-input').value = existing ? (existing.sourceText || '') : '';
+
+      openModal('modal-source');
+    }
+
+    function renderPickExistingTaskModal() {
+      const targetDate = state.currentDate;
+      const alreadyShownIds = new Set(MeetingGenerator.getTasksForDate(targetDate, true).map(t => t.id));
+      const candidates = state.tasks.filter(t => t.status !== '完了' && !alreadyShownIds.has(t.id));
+
+      const container = document.getElementById('pick-task-list-container');
+      if (candidates.length === 0) {
+        container.innerHTML = `<div class="empty-state">追加可能な未完了タスクはありません。</div>`;
+        return;
+      }
+
+      container.innerHTML = candidates.map(t => {
+        const proj = state.projects.find(p => p.id === t.projectId);
+        return `
+          <div style="border:1px solid var(--border-color); border-radius:var(--radius); padding:8px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <span class="badge status-${Utils.escapeHtml(t.status)}">${Utils.escapeHtml(t.status)}</span>
+              <strong>[${Utils.escapeHtml(proj ? proj.name : '不明')}] ${Utils.escapeHtml(t.title)}</strong>
+              <span style="font-size:12px; color:var(--text-muted); margin-left:6px;">担当: ${Utils.escapeHtml(t.assignee || '未定')} / 登録日: ${Utils.escapeHtml(t.createdDate || '-')}</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-primary" data-pick-task-id="${Utils.escapeHtml(t.id)}">＋ 当日に追加</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /**
+     * ============================================================================
+     * 動作確認用サンプルデータ投入 (WBSの期間・重複確認対応データ込み)
+     * ============================================================================
+     */
+    async function insertSampleData() {
+      const today = state.currentDate;
+      const yesterday = Utils.addDaysSlash(today, -1);
+      const tomorrow = Utils.addDaysSlash(today, 1);
+      const dayAfterTomorrow = Utils.addDaysSlash(today, 2);
+      const nowTs = Utils.getLocalTimestamp();
+
+      const projA = { id: 'proj_sample_a', name: '案件A', description: '基幹システム更改プロジェクト', createdAt: nowTs, updatedAt: nowTs };
+      const projB = { id: 'proj_sample_b', name: '案件B', description: 'ネットワーク機器リプレース・運用対応', createdAt: nowTs, updatedAt: nowTs };
+
+      const tasks = [
+        {
+          id: 'task_sample_1',
+          projectId: 'proj_sample_a',
+          title: '設定作業',
+          description: '設定作業（パラメータシート反映）',
+          decision: '',
+          sourceText: '',
+          assignee: '田中さん',
+          status: '完了',
+          createdDate: yesterday,
+          scheduledDate: yesterday,
+          performedDate: yesterday,
+          completedDate: today,
+          createdAt: nowTs,
+          updatedAt: nowTs
+        },
+        {
+          id: 'task_sample_2',
+          projectId: 'proj_sample_a',
+          title: '設定作業',
+          description: '設定作業（本番環境リハーサル）',
+          decision: '',
+          sourceText: '',
+          assignee: '鈴木さん',
+          status: '対応中',
+          createdDate: yesterday,
+          scheduledDate: today,
+          performedDate: tomorrow,
+          completedDate: '',
+          createdAt: nowTs,
+          updatedAt: nowTs
+        },
+        {
+          id: 'task_sample_3',
+          projectId: 'proj_sample_a',
+          title: '10:00 案件A 定例会',
+          description: '10:00 案件A 定例会（進捗報告・課題確認）',
+          decision: '',
+          sourceText: '',
+          assignee: '鈴木さん',
+          status: '未着手',
+          createdDate: today,
+          scheduledDate: today,
+          performedDate: today,
+          completedDate: '',
+          createdAt: nowTs,
+          updatedAt: nowTs
+        },
+        {
+          id: 'task_sample_4',
+          projectId: 'proj_sample_b',
+          title: '障害メールの件名',
+          description: '登録した障害内容',
+          decision: '登録した判断内容',
+          sourceText: '件名: 障害メールの件名\n登録した障害内容\n対応方針: 登録した判断内容',
+          assignee: '鈴木さん',
+          status: '対応中',
+          createdDate: today,
+          scheduledDate: today,
+          performedDate: tomorrow,
+          completedDate: '',
+          createdAt: nowTs,
+          updatedAt: nowTs
+        },
+        {
+          id: 'task_sample_5',
+          projectId: 'proj_sample_b',
+          title: '問い合わせメールの件名',
+          description: '登録した問い合わせ内容',
+          decision: '',
+          sourceText: '',
+          assignee: '高橋さん',
+          status: '未着手',
+          createdDate: yesterday,
+          scheduledDate: tomorrow,
+          performedDate: dayAfterTomorrow,
+          completedDate: '',
+          createdAt: nowTs,
+          updatedAt: nowTs
+        }
+      ];
+
+      const sources = [
+        {
+          id: 'src_sample_check_1',
+          date: today,
+          type: 'checkSection',
+          projectId: 'proj_sample_a',
+          subject: '日付や担当者など、確認が必要な情報',
+          content: '',
+          decision: '',
+          sourceText: '',
+          createdAt: nowTs,
+          updatedAt: nowTs
+        }
+      ];
+
+      const yesterdayMeeting = {
+        date: yesterday,
+        taskIds: ['task_sample_1', 'task_sample_2', 'task_sample_5'],
+        generatedText: `${yesterday}\n##########\n案件A\n##########\n・設定作業\n →${yesterday} 田中さん\n   設定作業（対応中）\n →${yesterday} 鈴木さん\n   設定作業（未着手）`,
+        editedText: `${yesterday}\n##########\n案件A\n##########\n・設定作業\n →${yesterday} 田中さん\n   設定作業（対応中）\n →${yesterday} 鈴木さん\n   設定作業（未着手）`,
+        createdAt: nowTs,
+        updatedAt: nowTs
+      };
+
+      await db.put('projects', projA);
+      await db.put('projects', projB);
+      for (const t of tasks) await db.put('tasks', t);
+      for (const s of sources) await db.put('sources', s);
+      await db.put('dailyMeetings', yesterdayMeeting);
+
+      await reloadAllDataFromDB();
+      document.getElementById('meeting-preview-textarea').dataset.manualEdited = 'false';
+      renderMeetingView(false);
+      renderProjectsAndTasksView();
+      renderWbsView();
+      Utils.notify('サンプルデータを投入しました。「3. 対応スケジュール (WBS)」タブで作業重複ハイライトを確認できます。', 'success');
+    }
+
+    /**
+     * ============================================================================
+     * アプリケーション起動エントリポイント
+     * ============================================================================
+     */
+    async function bootstrap() {
+      const statusBadge = document.getElementById('db-status');
+      try {
+        await db.init();
+        statusBadge.textContent = 'IndexedDB 正常稼働中';
+        await migrateLegacySectionSourcesIfNeeded();
+        await reloadAllDataFromDB();
+        setupNavigation();
+        bindAllEvents();
+        renderMeetingView(false);
+        renderProjectsAndTasksView();
+        renderWbsView();
+        renderSettingsView();
+      } catch (err) {
+        statusBadge.textContent = 'IndexedDB エラー';
+        statusBadge.classList.add('error');
+        Utils.notify(err.message, 'error');
+      }
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>
