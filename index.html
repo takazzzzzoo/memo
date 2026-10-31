@@ -3768,7 +3768,7 @@
 
       document.getElementById('task-id-input').value = existing ? existing.id : '';
       projSelect.value = existing ? existing.projectId : (defaultProjectId || state.projects[0].id);
-      document.getElementById('task-status-select').value = existing ? existing.status : '対応中';
+      document.getElementById('task-status-select').value = existing ? existing.status : '未着手';
       document.getElementById('task-title-input').value = existing ? existing.title : '';
       document.getElementById('task-desc-input').value = existing ? (existing.description || '') : '';
       document.getElementById('task-decision-input').value = existing ? (existing.decision || '') : '';
